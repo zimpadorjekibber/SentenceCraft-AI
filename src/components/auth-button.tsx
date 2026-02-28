@@ -21,7 +21,6 @@ export function AuthButton() {
   const { user } = useAuth();
 
   const handleSignIn = async () => {
-    // Guard: auth is null when Firebase is not configured
     if (!auth) return;
     try {
       await signInWithPopup(auth, googleProvider);
@@ -44,9 +43,9 @@ export function AuthButton() {
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button variant="outline" disabled>
-              <LogIn className="mr-2 h-4 w-4" />
-              Login with Google
+            <Button variant="outline" disabled className="h-9 w-9 sm:h-auto sm:w-auto sm:px-3">
+              <LogIn className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Login</span>
             </Button>
           </TooltipTrigger>
           <TooltipContent>
@@ -61,7 +60,7 @@ export function AuthButton() {
     return (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+          <Button variant="ghost" className="relative h-9 w-9 rounded-full p-0">
             <Avatar className="h-9 w-9">
               <AvatarImage src={user.photoURL ?? undefined} alt={user.displayName ?? 'User'} />
               <AvatarFallback>{user.displayName?.charAt(0).toUpperCase() ?? 'U'}</AvatarFallback>
@@ -76,7 +75,7 @@ export function AuthButton() {
             </div>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={handleSignOut}>
+          <DropdownMenuItem onClick={handleSignOut} className="py-2.5">
             <LogOut className="mr-2 h-4 w-4" />
             <span>Log out</span>
           </DropdownMenuItem>
@@ -86,9 +85,9 @@ export function AuthButton() {
   }
 
   return (
-    <Button onClick={handleSignIn} variant="outline">
-      <LogIn className="mr-2 h-4 w-4" />
-      Login with Google
+    <Button onClick={handleSignIn} variant="outline" className="h-9 w-9 sm:h-auto sm:w-auto sm:px-3">
+      <LogIn className="h-4 w-4 sm:mr-2" />
+      <span className="hidden sm:inline">Login</span>
     </Button>
   );
 }

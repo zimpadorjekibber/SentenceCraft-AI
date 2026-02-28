@@ -347,14 +347,19 @@ export function SentenceAnalyzer({ apiKey, aiProvider, onWordDetailRequest }: Se
           rows={3}
           disabled={isListening || isLoading || isCameraProcessing}
           className="text-sm sm:text-base"
+          onFocus={(e) => {
+            setTimeout(() => {
+              e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 300);
+          }}
         />
-        <div className="flex flex-col sm:flex-row items-stretch space-y-2 sm:space-y-0 sm:space-x-2">
+        <div className="flex items-stretch gap-2">
           <Button
             onClick={handleAnalyze}
             disabled={isLoading || isListening || isCameraProcessing || !inputText.trim()}
             className="flex-grow flex items-center justify-center text-sm"
           >
-            {isLoading && currentAction === 'Analysis' ? <LoadingSpinner inline /> : <><ScanText className="mr-2 h-4 w-4" /> Analyze Sentence</>}
+            {isLoading && currentAction === 'Analysis' ? <LoadingSpinner inline /> : <><ScanText className="mr-2 h-4 w-4" /> Analyze</>}
           </Button>
           <Button
             variant="outline" size="icon" onClick={triggerCamera}
@@ -397,100 +402,100 @@ export function SentenceAnalyzer({ apiKey, aiProvider, onWordDetailRequest }: Se
 
         <Separator className="my-6" />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-3">
             {/* Question Generator */}
-            <div className="space-y-2 p-3 border rounded-md">
-              <h4 className="text-md font-semibold text-primary flex items-center"><MessageCircleQuestion className="mr-2 h-4 w-4" />Question Builder</h4>
+            <div className="space-y-2 p-3 border rounded-lg">
+              <h4 className="text-sm font-semibold text-primary flex items-center"><MessageCircleQuestion className="mr-1.5 h-4 w-4 shrink-0" />Questions</h4>
               <div className="flex flex-col gap-2">
                 <Select value={selectedQuestionType || ''} onValueChange={setSelectedQuestionType}>
-                    <SelectTrigger className="text-xs"><SelectValue placeholder="Select type" /></SelectTrigger>
-                    <SelectContent>{QUESTION_TYPES.map(q => <SelectItem key={q.value} value={q.value} className="text-xs">{q.label}</SelectItem>)}</SelectContent>
+                    <SelectTrigger className="text-sm"><SelectValue placeholder="Select type" /></SelectTrigger>
+                    <SelectContent>{QUESTION_TYPES.map(q => <SelectItem key={q.value} value={q.value}>{q.label}</SelectItem>)}</SelectContent>
                 </Select>
-                <div className="flex gap-2">
-                  <Button variant="outline" onClick={handleMakeQuestion} disabled={isLoading || !inputText.trim()} className="flex-grow text-xs h-8">
-                    {isLoading && currentAction === 'Question Generation' ? <LoadingSpinner inline /> : "Make Question"}
+                <div className="flex gap-1.5">
+                  <Button variant="outline" onClick={handleMakeQuestion} disabled={isLoading || !inputText.trim()} className="flex-grow text-xs">
+                    {isLoading && currentAction === 'Question Generation' ? <LoadingSpinner inline /> : "Make"}
                   </Button>
-                  <Button variant="ghost" size="sm" onClick={() => handleFeatureInfoClick("Questions")} className="h-8"><BookOpenCheck className="h-4 w-4" /></Button>
+                  <Button variant="ghost" size="icon" onClick={() => handleFeatureInfoClick("Questions")} className="shrink-0"><BookOpenCheck className="h-4 w-4" /></Button>
                 </div>
               </div>
             </div>
 
             {/* Modal Verbs */}
-            <div className="space-y-2 p-3 border rounded-md">
-              <h4 className="text-md font-semibold text-primary flex items-center"><HelpCircle className="mr-2 h-4 w-4" />Modal Transformer</h4>
+            <div className="space-y-2 p-3 border rounded-lg">
+              <h4 className="text-sm font-semibold text-primary flex items-center"><HelpCircle className="mr-1.5 h-4 w-4 shrink-0" />Modals</h4>
               <div className="flex flex-col gap-2">
                 <Select value={selectedModalVerbForRewrite || ''} onValueChange={setSelectedModalVerbForRewrite}>
-                    <SelectTrigger className="text-xs"><SelectValue placeholder="Select modal" /></SelectTrigger>
-                    <SelectContent>{MODAL_VERBS.map(m => <SelectItem key={m.value} value={m.value} className="text-xs">{m.label}</SelectItem>)}</SelectContent>
+                    <SelectTrigger className="text-sm"><SelectValue placeholder="Select modal" /></SelectTrigger>
+                    <SelectContent>{MODAL_VERBS.map(m => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}</SelectContent>
                 </Select>
-                <div className="flex gap-2">
-                  <Button variant="outline" onClick={handleModalRewrite} disabled={isLoading || !inputText.trim()} className="flex-grow text-xs h-8">
-                    {isLoading && currentAction === 'Modal Rewrite' ? <LoadingSpinner inline /> : "Apply Modal"}
+                <div className="flex gap-1.5">
+                  <Button variant="outline" onClick={handleModalRewrite} disabled={isLoading || !inputText.trim()} className="flex-grow text-xs">
+                    {isLoading && currentAction === 'Modal Rewrite' ? <LoadingSpinner inline /> : "Apply"}
                   </Button>
-                  <Button variant="ghost" size="sm" onClick={() => handleFeatureInfoClick("Modals")} className="h-8"><BookOpenCheck className="h-4 w-4" /></Button>
+                  <Button variant="ghost" size="icon" onClick={() => handleFeatureInfoClick("Modals")} className="shrink-0"><BookOpenCheck className="h-4 w-4" /></Button>
                 </div>
               </div>
             </div>
 
             {/* Conditionals */}
-            <div className="space-y-2 p-3 border rounded-md">
-              <h4 className="text-md font-semibold text-primary flex items-center"><Sparkles className="mr-2 h-4 w-4" />Conditional Master</h4>
+            <div className="space-y-2 p-3 border rounded-lg">
+              <h4 className="text-sm font-semibold text-primary flex items-center"><Sparkles className="mr-1.5 h-4 w-4 shrink-0" />Conditionals</h4>
               <div className="flex flex-col gap-2">
                 <Select value={selectedConditional || ''} onValueChange={setSelectedConditional}>
-                    <SelectTrigger className="text-xs"><SelectValue placeholder="Select type" /></SelectTrigger>
-                    <SelectContent>{CONDITIONALS.map(c => <SelectItem key={c.value} value={c.value} className="text-xs">{c.label}</SelectItem>)}</SelectContent>
+                    <SelectTrigger className="text-sm"><SelectValue placeholder="Select type" /></SelectTrigger>
+                    <SelectContent>{CONDITIONALS.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}</SelectContent>
                 </Select>
-                <div className="flex gap-2">
-                  <Button variant="outline" onClick={handleTransformConditional} disabled={isLoading || !inputText.trim()} className="flex-grow text-xs h-8">
+                <div className="flex gap-1.5">
+                  <Button variant="outline" onClick={handleTransformConditional} disabled={isLoading || !inputText.trim()} className="flex-grow text-xs">
                     {isLoading && currentAction === 'Conditional Transformation' ? <LoadingSpinner inline /> : "Transform"}
                   </Button>
-                  <Button variant="ghost" size="sm" onClick={() => handleFeatureInfoClick("Conditionals")} className="h-8"><BookOpenCheck className="h-4 w-4" /></Button>
+                  <Button variant="ghost" size="icon" onClick={() => handleFeatureInfoClick("Conditionals")} className="shrink-0"><BookOpenCheck className="h-4 w-4" /></Button>
                 </div>
               </div>
             </div>
 
             {/* Articles */}
-            <div className="space-y-2 p-3 border rounded-md">
-              <h4 className="text-md font-semibold text-primary flex items-center"><Shapes className="mr-2 h-4 w-4" />Articles & Determiners</h4>
+            <div className="space-y-2 p-3 border rounded-lg">
+              <h4 className="text-sm font-semibold text-primary flex items-center"><Shapes className="mr-1.5 h-4 w-4 shrink-0" />Articles</h4>
               <div className="flex flex-col gap-2">
-                <Button variant="outline" onClick={handleAnalyzeArticles} disabled={isLoading || !inputText.trim()} className="text-xs h-8">
-                  {isLoading && currentAction === 'Article Check' ? <LoadingSpinner inline /> : "Check Article Usage"}
+                <Button variant="outline" onClick={handleAnalyzeArticles} disabled={isLoading || !inputText.trim()} className="text-xs w-full">
+                  {isLoading && currentAction === 'Article Check' ? <LoadingSpinner inline /> : "Check Articles"}
                 </Button>
-                <Button variant="ghost" size="sm" onClick={() => handleFeatureInfoClick("Articles")} className="text-xs h-8 w-full"><BookOpenCheck className="mr-2 h-3 w-3" /> View Article Rules</Button>
+                <Button variant="ghost" size="sm" onClick={() => handleFeatureInfoClick("Articles")} className="text-xs w-full"><BookOpenCheck className="mr-1.5 h-3.5 w-3.5" /> Rules</Button>
               </div>
             </div>
 
             {/* Punctuate */}
-            <div className="space-y-2 p-3 border rounded-md flex flex-col justify-between">
-              <h4 className="text-md font-semibold text-primary flex items-center"><TextCursorInput className="mr-2 h-4 w-4" />Punctuate</h4>
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={() => handleGenericAction("Punctuation", () => `You are an English grammar expert. Add correct punctuation to the following sentence. The sentence may be missing commas, periods, question marks, exclamation marks, apostrophes, quotation marks, colons, semicolons, or capital letters at the start. Sentence: "${inputText}". Task: 1. Add all missing punctuation marks and fix capitalization. 2. Explain what punctuation was added and why, referencing punctuation rules. 3. Break down the punctuated sentence into an array of objects, each with "word" (string) and "pos" (Part-of-Speech tag string like "Noun", "Verb", "Adjective", "Adverb", "Pronoun", "Preposition", "Conjunction", "Determiner", "Auxiliary", "Punctuation", etc.). 4. Translate the punctuated sentence into natural Hindi. Respond with ONLY a valid JSON object (no extra text): { "rewrittenSentence": [{"word":"He","pos":"Pronoun"},{"word":"said","pos":"Verb"},{"word":",","pos":"Punctuation"},{"word":"Hello","pos":"Interjection"},{"word":"!","pos":"Punctuation"}], "hindiTranslation": "...", "explanation": "..." }`)} disabled={isLoading || !inputText.trim()} className="flex-grow text-xs h-8">
-                  {isLoading && currentAction === 'Punctuation' ? <LoadingSpinner inline /> : "Punctuate"}
+            <div className="space-y-2 p-3 border rounded-lg flex flex-col justify-between">
+              <h4 className="text-sm font-semibold text-primary flex items-center"><TextCursorInput className="mr-1.5 h-4 w-4 shrink-0" />Punctuate</h4>
+              <div className="flex gap-1.5">
+                <Button variant="outline" onClick={() => handleGenericAction("Punctuation", () => `You are an English grammar expert. Add correct punctuation to the following sentence. The sentence may be missing commas, periods, question marks, exclamation marks, apostrophes, quotation marks, colons, semicolons, or capital letters at the start. Sentence: "${inputText}". Task: 1. Add all missing punctuation marks and fix capitalization. 2. Explain what punctuation was added and why, referencing punctuation rules. 3. Break down the punctuated sentence into an array of objects, each with "word" (string) and "pos" (Part-of-Speech tag string like "Noun", "Verb", "Adjective", "Adverb", "Pronoun", "Preposition", "Conjunction", "Determiner", "Auxiliary", "Punctuation", etc.). 4. Translate the punctuated sentence into natural Hindi. Respond with ONLY a valid JSON object (no extra text): { "rewrittenSentence": [{"word":"He","pos":"Pronoun"},{"word":"said","pos":"Verb"},{"word":",","pos":"Punctuation"},{"word":"Hello","pos":"Interjection"},{"word":"!","pos":"Punctuation"}], "hindiTranslation": "...", "explanation": "..." }`)} disabled={isLoading || !inputText.trim()} className="flex-grow text-xs">
+                  {isLoading && currentAction === 'Punctuation' ? <LoadingSpinner inline /> : "Fix"}
                 </Button>
-                <Button variant="ghost" size="sm" onClick={() => handleFeatureInfoClick("Punctuation")} className="h-8"><BookOpenCheck className="h-4 w-4" /></Button>
+                <Button variant="ghost" size="icon" onClick={() => handleFeatureInfoClick("Punctuation")} className="shrink-0"><BookOpenCheck className="h-4 w-4" /></Button>
               </div>
             </div>
 
-            <div className="space-y-2 p-3 border rounded-md flex flex-col justify-between">
-              <h4 className="text-md font-semibold text-primary flex items-center"><Repeat className="mr-2 h-4 w-4" />Active/Passive Voice</h4>
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={() => handleGenericAction("Voice", () => `You are an English grammar expert. Transform the following sentence to the other grammatical voice (active to passive or passive to active). Sentence: "${inputText}". Task: 1. Transform the voice. 2. Explain the rule. 3. Break down into array of objects with "word" (string) and "pos" (string like "Noun","Verb","Auxiliary", etc.). 4. Translate to Hindi. Respond with ONLY valid JSON: { "transformedSentence": [{"word":"The","pos":"Determiner"},...], "hindiTranslation": "...", "explanation": "..." }`)} disabled={isLoading || !inputText.trim()} className="flex-grow text-xs h-8">Voice Swap</Button>
-                <Button variant="ghost" size="sm" onClick={() => handleFeatureInfoClick("Active and Passive Voice")} className="h-8"><BookOpenCheck className="h-4 w-4" /></Button>
+            <div className="space-y-2 p-3 border rounded-lg flex flex-col justify-between">
+              <h4 className="text-sm font-semibold text-primary flex items-center"><Repeat className="mr-1.5 h-4 w-4 shrink-0" />Voice</h4>
+              <div className="flex gap-1.5">
+                <Button variant="outline" onClick={() => handleGenericAction("Voice", () => `You are an English grammar expert. Transform the following sentence to the other grammatical voice (active to passive or passive to active). Sentence: "${inputText}". Task: 1. Transform the voice. 2. Explain the rule. 3. Break down into array of objects with "word" (string) and "pos" (string like "Noun","Verb","Auxiliary", etc.). 4. Translate to Hindi. Respond with ONLY valid JSON: { "transformedSentence": [{"word":"The","pos":"Determiner"},...], "hindiTranslation": "...", "explanation": "..." }`)} disabled={isLoading || !inputText.trim()} className="flex-grow text-xs">Swap</Button>
+                <Button variant="ghost" size="icon" onClick={() => handleFeatureInfoClick("Active and Passive Voice")} className="shrink-0"><BookOpenCheck className="h-4 w-4" /></Button>
               </div>
             </div>
             
-            <div className="space-y-2 p-3 border rounded-md flex flex-col justify-between">
-              <h4 className="text-md font-semibold text-primary flex items-center"><Quote className="mr-2 h-4 w-4" />Direct/Indirect Speech</h4>
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={() => handleGenericAction("Speech", () => `You are an English grammar expert. Transform the following sentence between direct and indirect (reported) speech. Sentence: "${inputText}". Task: 1. Transform the speech type. 2. Explain the rule. 3. Break down into array of objects with "word" (string) and "pos" (string like "Noun","Verb","Auxiliary", etc.). 4. Translate to Hindi. Respond with ONLY valid JSON: { "transformedSentence": [{"word":"He","pos":"Pronoun"},...], "hindiTranslation": "...", "explanation": "..." }`)} disabled={isLoading || !inputText.trim()} className="flex-grow text-xs h-8">Speech Swap</Button>
-                <Button variant="ghost" size="sm" onClick={() => handleFeatureInfoClick("Direct and Indirect Speech")} className="h-8"><BookOpenCheck className="h-4 w-4" /></Button>
+            <div className="space-y-2 p-3 border rounded-lg flex flex-col justify-between col-span-2 sm:col-span-1">
+              <h4 className="text-sm font-semibold text-primary flex items-center"><Quote className="mr-1.5 h-4 w-4 shrink-0" />Speech</h4>
+              <div className="flex gap-1.5">
+                <Button variant="outline" onClick={() => handleGenericAction("Speech", () => `You are an English grammar expert. Transform the following sentence between direct and indirect (reported) speech. Sentence: "${inputText}". Task: 1. Transform the speech type. 2. Explain the rule. 3. Break down into array of objects with "word" (string) and "pos" (string like "Noun","Verb","Auxiliary", etc.). 4. Translate to Hindi. Respond with ONLY valid JSON: { "transformedSentence": [{"word":"He","pos":"Pronoun"},...], "hindiTranslation": "...", "explanation": "..." }`)} disabled={isLoading || !inputText.trim()} className="flex-grow text-xs">Swap</Button>
+                <Button variant="ghost" size="icon" onClick={() => handleFeatureInfoClick("Direct and Indirect Speech")} className="shrink-0"><BookOpenCheck className="h-4 w-4" /></Button>
               </div>
             </div>
         </div>
       </CardContent>
 
       <AlertDialog open={showFeatureRuleDialog} onOpenChange={setShowFeatureRuleDialog}>
-        <AlertDialogContent className="max-w-2xl">
+        <AlertDialogContent className="sm:max-w-2xl">
           <AlertDialogHeader><AlertDialogTitle>{activeFeatureRuleTitle}</AlertDialogTitle></AlertDialogHeader>
           <div className="max-h-[60vh] pr-4 overflow-y-auto">
             <div className="text-sm text-muted-foreground"><HighlightedRules rules={activeFeatureRuleContent || ''} /></div>

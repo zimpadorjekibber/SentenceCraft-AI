@@ -29,7 +29,7 @@ export function AppQrCode() {
       </Button>
 
       {showQR && (
-        <div className="absolute top-10 left-0 z-50 bg-card border-2 border-primary/30 rounded-lg shadow-2xl p-4 animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="absolute top-10 left-0 z-50 bg-card border-2 border-primary/30 rounded-lg shadow-2xl p-3 sm:p-4 animate-in fade-in slide-in-from-top-2 duration-200 max-w-[calc(100vw-2rem)]">
           <div className="flex items-center justify-between mb-2">
             <p className="text-xs font-semibold text-primary">Scan to Open App</p>
             <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setShowQR(false)}>

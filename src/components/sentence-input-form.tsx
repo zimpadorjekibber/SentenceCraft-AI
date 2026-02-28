@@ -135,7 +135,7 @@ export function SentenceInputForm({ values, onChange, disabled }: SentenceInputF
                 <Icon className={`mr-2 h-4 w-4 sm:h-5 sm:w-5 ${colorClass}`} />
                 {label}
               </Label>
-              <div className="flex items-center">
+              <div className="flex items-center gap-2">
                 <Input
                   id={id}
                   type="text"
@@ -145,6 +145,11 @@ export function SentenceInputForm({ values, onChange, disabled }: SentenceInputF
                   disabled={disabled || (isListening && activeField !== id)}
                   aria-label={label}
                   className="text-sm sm:text-base flex-grow"
+                  onFocus={(e) => {
+                    setTimeout(() => {
+                      e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }, 300);
+                  }}
                 />
                 <Button
                   type="button"
@@ -153,15 +158,15 @@ export function SentenceInputForm({ values, onChange, disabled }: SentenceInputF
                   onClick={() => handleMicClick(id)}
                   disabled={disabled || !isSpeechApiSupported || (isListening && activeField !== id)}
                   className={cn(
-                    "ml-2",
+                    "shrink-0",
                     isListening && activeField === id && "bg-red-500 hover:bg-red-600 text-white"
                   )}
                   aria-label={`Speak ${label}`}
                 >
                   {isListening && activeField === id ? (
-                    <MicOff className="h-4 w-4" />
+                    <MicOff className="h-5 w-5" />
                   ) : (
-                    <Mic className="h-4 w-4 text-primary" />
+                    <Mic className="h-5 w-5 text-primary" />
                   )}
                 </Button>
               </div>

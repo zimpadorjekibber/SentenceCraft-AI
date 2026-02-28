@@ -112,7 +112,7 @@ export function TenseSelector({ selectedTense, onTenseSelect, disabled }: TenseS
                   >
                     <span className="font-semibold text-center text-sm md:text-base whitespace-nowrap">{tenseInfo.displayName.split(" ")[0]} {tenseInfo.displayName.split(" ")[1]}</span>
                     {tenseInfo.displayName.split(" ")[2] && <span className="font-semibold text-center text-sm md:text-base whitespace-nowrap">{tenseInfo.displayName.split(" ")[2]} {tenseInfo.displayName.split(" ")[3]}</span>}
-                     <span className="text-xs mt-1 opacity-90 font-normal">
+                     <span className="text-[11px] sm:text-sm mt-1 opacity-90 font-normal">
                         {tenseInfo.hindiCue.split('//BR//').map((line, idx, arr) => (
                           <React.Fragment key={idx}>
                             {line}

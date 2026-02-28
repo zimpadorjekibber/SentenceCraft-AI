@@ -273,6 +273,9 @@ export function HindiToEnglishTenseHelper({ apiKey, aiProvider, onWordDetailRequ
             value={hindiInput}
             onChange={handleTextareaChange}
             onKeyDown={handleTextareaKeyDown}
+            onFocus={(e) => {
+              setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300);
+            }}
             onBlur={() => {
               // Delay clearing so click on suggestion works
               setTimeout(() => clearSuggestions(), 150);
@@ -303,7 +306,7 @@ export function HindiToEnglishTenseHelper({ apiKey, aiProvider, onWordDetailRequ
                       handleSelectSuggestion(s);
                     }}
                     className={cn(
-                      "px-3 py-1.5 rounded-md text-sm font-medium transition-colors cursor-pointer",
+                      "px-3 py-2.5 sm:py-1.5 rounded-md text-base sm:text-sm font-medium transition-colors cursor-pointer min-h-[44px] sm:min-h-0",
                       i === selectedSuggestionIndex
                         ? "bg-primary text-primary-foreground"
                         : "bg-muted hover:bg-muted/80 text-foreground"
@@ -316,13 +319,13 @@ export function HindiToEnglishTenseHelper({ apiKey, aiProvider, onWordDetailRequ
             </div>
           )}
         </div>
-        <div className="flex flex-col sm:flex-row items-stretch space-y-2 sm:space-y-0 sm:space-x-2">
+        <div className="flex items-stretch gap-2">
             <Button
               onClick={handleAnalyzeHindi}
               disabled={isLoading || isListening || isCameraProcessing || !hindiInput.trim()}
               className="flex-grow flex items-center justify-center text-sm"
             >
-              {isLoading ? <LoadingSpinner inline /> : <><Brain className="mr-2 h-4 w-4" /> Find English Tense</>}
+              {isLoading ? <LoadingSpinner inline /> : <><Brain className="mr-2 h-5 w-5" /> Find Tense</>}
             </Button>
             <Button
                 variant="outline" size="icon" onClick={triggerCamera}
@@ -382,11 +385,11 @@ export function HindiToEnglishTenseHelper({ apiKey, aiProvider, onWordDetailRequ
 
               {analysisResult.englishTenseRuleKey && (
                 <Button
-                  variant="outline" size="sm"
+                  variant="outline" size="default"
                   onClick={() => onViewDetailedRulesRequest(analysisResult.englishTenseRuleKey)}
-                  className="text-xs sm:text-sm mt-2"
+                  className="text-xs sm:text-sm mt-2 w-full sm:w-auto"
                   >
-                    <BookOpen className="mr-1.5 h-3.5 w-3.5" />
+                    <BookOpen className="mr-1.5 h-4 w-4" />
                     View Rules for {analysisResult.identifiedEnglishTense}
                 </Button>
               )}

@@ -95,15 +95,15 @@ export function SentenceModification({ apiKey, aiProvider, originalSentenceTagge
                 {suggestions && suggestions.length > 0 && (
                     <div className="space-y-3">
                         {suggestions.map((suggestion, index) => (
-                            <div key={index} className="flex items-center gap-2 p-2 border rounded-md bg-muted/20">
+                            <div key={index} className="flex flex-col sm:flex-row sm:items-center gap-2 p-3 border rounded-md bg-muted/20">
                                 <div className="flex-grow">
-                                    <InteractiveSentence 
+                                    <InteractiveSentence
                                         taggedSentence={suggestion}
                                         onWordDetailRequest={onWordDetailRequest}
                                         sentenceIdentifier={`sugg-${index}`}
                                     />
                                 </div>
-                                <Button size="sm" variant="outline" onClick={() => onSuggestionSelect(suggestion)}>
+                                <Button size="default" variant="outline" onClick={() => onSuggestionSelect(suggestion)} className="w-full sm:w-auto shrink-0">
                                     <ThumbsUp className="mr-2 h-4 w-4" />
                                     Use this
                                 </Button>

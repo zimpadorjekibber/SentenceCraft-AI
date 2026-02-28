@@ -255,55 +255,62 @@ Respond with ONLY a valid JSON object (no extra text):
   return (
     <div className="min-h-screen bg-background flex flex-col items-center py-6 sm:py-8 px-4 font-body">
       <div className="container mx-auto max-w-4xl">
-        <header className="mb-6 sm:mb-8 text-center relative">
-          {/* Top Left: QR Code */}
-          <div className="absolute top-0 left-0 flex flex-col items-start gap-1">
-            <AppQrCode />
-            <AuthButton />
-          </div>
-          {/* Top Right: Share, Install, Theme, Settings */}
-          <div className="absolute top-0 right-0 flex items-center gap-1">
-            <Button variant="ghost" size="icon" onClick={handleShare} title="Share App">
-              <Share2 className="h-5 w-5 text-primary" />
-            </Button>
-            {canInstall && (
-              <Button variant="ghost" size="icon" onClick={handleInstall} title="Install App">
-                <Download className="h-5 w-5 text-green-600 dark:text-green-400" />
+        <header className="mb-5 sm:mb-8">
+          {/* Top toolbar: icons in a single responsive row */}
+          <div className="flex items-center justify-between mb-3 gap-0.5">
+            {/* Left group */}
+            <div className="flex items-center gap-0.5">
+              <AppQrCode />
+              <AuthButton />
+            </div>
+            {/* Right group */}
+            <div className="flex items-center gap-0.5">
+              <Button variant="ghost" size="icon" onClick={handleShare} title="Share App" className="h-9 w-9 sm:h-11 sm:w-11">
+                <Share2 className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
               </Button>
-            )}
-            <ThemeToggle />
-            <Button variant="ghost" size="icon" onClick={() => setShowApiKeyDialog(true)}>
-              <Settings className="h-5 w-5" />
-            </Button>
-            <ApiKeyDialog
-              isOpen={showApiKeyDialog}
-              onOpenChange={setShowApiKeyDialog}
-              currentApiKey={apiKey}
-              currentProvider={aiProvider}
-              onSave={(newKey, provider) => {
-                setApiKey(newKey);
-                setAiProvider(provider);
-                localStorage.setItem(`${provider}_api_key`, newKey);
-                localStorage.setItem('ai_provider', provider);
-                toast({ title: "Settings Saved!", description: `Your ${provider === 'groq' ? 'Groq' : 'Gemini'} API key has been saved.` });
-                setShowApiKeyDialog(false);
-              }}
-              onClear={() => {
-                setApiKey(null);
-                localStorage.removeItem(`${aiProvider}_api_key`);
-                toast({ title: "API Key Removed", description: "Your API key has been cleared." });
-              }}
-            />
+              {canInstall && (
+                <Button variant="ghost" size="icon" onClick={handleInstall} title="Install App" className="h-9 w-9 sm:h-11 sm:w-11">
+                  <Download className="h-4 w-4 sm:h-5 sm:w-5 text-green-600 dark:text-green-400" />
+                </Button>
+              )}
+              <ThemeToggle />
+              <Button variant="ghost" size="icon" onClick={() => setShowApiKeyDialog(true)} className="h-9 w-9 sm:h-11 sm:w-11">
+                <Settings className="h-4 w-4 sm:h-5 sm:w-5" />
+              </Button>
+              <ApiKeyDialog
+                isOpen={showApiKeyDialog}
+                onOpenChange={setShowApiKeyDialog}
+                currentApiKey={apiKey}
+                currentProvider={aiProvider}
+                onSave={(newKey, provider) => {
+                  setApiKey(newKey);
+                  setAiProvider(provider);
+                  localStorage.setItem(`${provider}_api_key`, newKey);
+                  localStorage.setItem('ai_provider', provider);
+                  toast({ title: "Settings Saved!", description: `Your ${provider === 'groq' ? 'Groq' : 'Gemini'} API key has been saved.` });
+                  setShowApiKeyDialog(false);
+                }}
+                onClear={() => {
+                  setApiKey(null);
+                  localStorage.removeItem(`${aiProvider}_api_key`);
+                  toast({ title: "API Key Removed", description: "Your API key has been cleared." });
+                }}
+              />
+            </div>
           </div>
-          <div className="inline-flex items-center justify-center bg-primary/10 p-3 rounded-full mb-3 sm:mb-4 mt-2">
-            <BookOpenText className="h-8 w-8 sm:h-10 sm:w-10 text-primary" />
+
+          {/* App branding - centered */}
+          <div className="text-center">
+            <div className="inline-flex items-center justify-center bg-primary/10 p-2.5 sm:p-3 rounded-full mb-2 sm:mb-4">
+              <BookOpenText className="h-7 w-7 sm:h-10 sm:w-10 text-primary" />
+            </div>
+            <h1 className="text-2xl sm:text-4xl md:text-5xl font-headline font-extrabold text-primary tracking-tight">
+              SentenceCraft AI
+            </h1>
+            <p className="mt-1 sm:mt-3 text-sm sm:text-lg md:text-xl text-muted-foreground">
+              Craft perfect English sentences with AI.
+            </p>
           </div>
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-headline font-extrabold text-primary tracking-tight">
-            SentenceCraft AI
-          </h1>
-          <p className="mt-2 sm:mt-3 text-md sm:text-lg md:text-xl text-muted-foreground">
-            Craft perfect English sentences with AI.
-          </p>
         </header>
         
         {!apiKey && (
@@ -385,7 +392,7 @@ Respond with ONLY a valid JSON object (no extra text):
         </Tabs>
         
         <AlertDialog open={showDetailedRulesDialog} onOpenChange={setShowDetailedRulesDialog}>
-            <AlertDialogContent className="max-w-2xl">
+            <AlertDialogContent className="sm:max-w-2xl">
                 <AlertDialogHeader>
                     <AlertDialogTitle className="text-lg sm:text-xl text-primary">
                         Detailed Rules for: {detailedRulesTense}
@@ -404,7 +411,7 @@ Respond with ONLY a valid JSON object (no extra text):
 
         {/* Word Detail Dialog */}
         <AlertDialog open={showWordDetailDialog} onOpenChange={setShowWordDetailDialog}>
-            <AlertDialogContent className="max-w-2xl">
+            <AlertDialogContent className="sm:max-w-2xl">
                 <AlertDialogHeader>
                     <AlertDialogTitle className="text-lg sm:text-xl text-primary flex items-center">
                         <BookOpen className="mr-2 h-5 w-5" />

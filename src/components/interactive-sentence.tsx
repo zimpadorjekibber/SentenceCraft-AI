@@ -3,11 +3,10 @@
 
 import React from 'react';
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import type { WordPos } from '@/types/ai-types';
 
@@ -55,42 +54,44 @@ export function InteractiveSentence({ taggedSentence, onWordDetailRequest, sente
   const fullSentenceText = taggedSentence.map(tw => tw.word).join(" ");
 
   return (
-    <TooltipProvider delayDuration={100}>
-      <div className="text-sm sm:text-base md:text-lg text-foreground bg-secondary/30 p-3 sm:p-4 rounded-md shadow-inner flex flex-wrap items-center leading-relaxed">
-        {taggedSentence.map((taggedWord, index) => (
-          <React.Fragment key={`${sentenceIdentifier}-word-${index}`}>
-            <Tooltip>
-              <TooltipTrigger asChild>
+    <div className="text-sm sm:text-base md:text-lg text-foreground bg-secondary/30 p-3 sm:p-4 rounded-md shadow-inner flex flex-wrap items-center leading-loose gap-y-1">
+      {taggedSentence.map((taggedWord, index) => (
+        <React.Fragment key={`${sentenceIdentifier}-word-${index}`}>
+          {taggedWord.pos === "Punctuation" ? (
+            <span className="text-foreground/80">{taggedWord.word}</span>
+          ) : (
+            <Popover>
+              <PopoverTrigger asChild>
                 <span
-                  className={`cursor-pointer hover:underline hover:scale-105 transition-transform ${WordPartOfSpeechColors[taggedWord.pos] || WordPartOfSpeechColors.Unknown}`}
-                  role="button" 
+                  className={`cursor-pointer underline decoration-dotted underline-offset-4 active:scale-95 transition-transform px-0.5 py-1 rounded-sm ${WordPartOfSpeechColors[taggedWord.pos] || WordPartOfSpeechColors.Unknown}`}
+                  role="button"
                   tabIndex={0}
                 >
                   {taggedWord.word}
                 </span>
-              </TooltipTrigger>
-              <TooltipContent className="bg-card border shadow-lg rounded-md p-2 z-50">
-                <div className="flex flex-col space-y-1 items-start">
+              </PopoverTrigger>
+              <PopoverContent className="w-auto max-w-[220px] p-3 z-50" sideOffset={6}>
+                <div className="flex flex-col space-y-2 items-start">
                   <p className="text-sm font-semibold">
                     {taggedWord.pos} {POS_HINDI_MAP[taggedWord.pos] ? `(${POS_HINDI_MAP[taggedWord.pos]})` : ''}
                   </p>
                   {onWordDetailRequest && (
                     <Button
-                      variant="link"
+                      variant="default"
                       size="sm"
-                      className="p-0 h-auto text-xs text-primary"
+                      className="text-xs font-semibold w-full"
                       onClick={() => onWordDetailRequest(taggedWord, fullSentenceText)}
                     >
                       Vocabulary Details
                     </Button>
                   )}
                 </div>
-              </TooltipContent>
-            </Tooltip>
-            {(index < taggedSentence.length - 1 && !/^[.,!?;:]$/.test(taggedSentence[index+1]?.word)) && '\u00A0'}
-          </React.Fragment>
-        ))}
-      </div>
-    </TooltipProvider>
+              </PopoverContent>
+            </Popover>
+          )}
+          {(index < taggedSentence.length - 1 && !/^[.,!?;:]$/.test(taggedSentence[index + 1]?.word)) && '\u00A0'}
+        </React.Fragment>
+      ))}
+    </div>
   );
 }
