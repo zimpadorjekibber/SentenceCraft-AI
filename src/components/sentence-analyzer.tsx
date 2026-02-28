@@ -37,10 +37,11 @@ import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { HighlightedRules } from './highlighted-rules';
 import { GRAMMAR_FEATURE_RULES } from '@/lib/grammar-feature-rules';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { generateAIContent, type AiProvider } from '@/lib/ai-client';
 
 interface SentenceAnalyzerProps {
   apiKey: string | null;
+  aiProvider: AiProvider;
   onWordDetailRequest: (wordData: WordPos, fullSentenceText: string) => void;
 }
 
@@ -76,7 +77,7 @@ function wordPosArrayToString(sentence: WordPos[]): string {
     return sentence.map(wp => wp.word).join(" ").replace(/ \./g, ".").replace(/ \?/g, "?").replace(/ \!/g, "!").replace(/ ,/g, ",");
 }
 
-export function SentenceAnalyzer({ apiKey, onWordDetailRequest }: SentenceAnalyzerProps) {
+export function SentenceAnalyzer({ apiKey, aiProvider, onWordDetailRequest }: SentenceAnalyzerProps) {
   const [inputText, setInputText] = useState('');
   const [analyzedSentence, setAnalyzedSentence] = useState<WordPos[] | null>(null);
   const [analyzedSentenceHindi, setAnalyzedSentenceHindi] = useState<string | null>(null);
@@ -100,16 +101,12 @@ export function SentenceAnalyzer({ apiKey, onWordDetailRequest }: SentenceAnalyz
   
   const { toast } = useToast();
 
-  const getGenAIModel = useCallback(() => {
+  const checkApiKey = useCallback(() => {
     if (!apiKey) {
-      toast({ title: "API Key Missing", description: "Please set your Gemini API key to use this feature.", variant: "destructive" });
-      return null;
+      toast({ title: "API Key Missing", description: "Please set your API key to use this feature.", variant: "destructive" });
+      return false;
     }
-    const genAI = new GoogleGenerativeAI(apiKey);
-    return genAI.getGenerativeModel({ 
-      model: "gemini-1.5-flash",
-      generationConfig: { responseMimeType: "application/json" }
-    });
+    return true;
   }, [apiKey, toast]);
 
   useEffect(() => {
@@ -168,8 +165,7 @@ export function SentenceAnalyzer({ apiKey, onWordDetailRequest }: SentenceAnalyz
         return;
     }
 
-    const model = getGenAIModel();
-    if (!model) return;
+    if (!checkApiKey()) return;
 
     setIsLoading(true);
     setCurrentAction(actionType);
@@ -177,10 +173,9 @@ export function SentenceAnalyzer({ apiKey, onWordDetailRequest }: SentenceAnalyz
     resetAllOutputs(true);
 
     const prompt = promptGenerator();
-    
+
     try {
-        const result = await model.generateContent(prompt);
-        const responseText = result.response.text();
+        const responseText = await generateAIContent(apiKey!, aiProvider, prompt);
         const parsedResult = JSON.parse(responseText);
 
         if (parsedResult.error) {

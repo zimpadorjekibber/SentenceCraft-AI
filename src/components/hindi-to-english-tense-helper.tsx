@@ -13,7 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Languages, Brain, AlertCircle, Mic, MicOff, BookOpen } from 'lucide-react';
 import type { WordPos } from '@/types/ai-types';
 import { cn } from '@/lib/utils';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { generateAIContent, type AiProvider } from '@/lib/ai-client';
 
 interface AnalyzeHindiForEnglishTenseOutput {
   identifiedEnglishTense: string;
@@ -25,11 +25,12 @@ interface AnalyzeHindiForEnglishTenseOutput {
 
 interface HindiToEnglishTenseHelperProps {
   apiKey: string | null;
+  aiProvider: AiProvider;
   onWordDetailRequest: (wordData: WordPos, fullSentenceText: string) => void;
-  onViewDetailedRulesRequest: (tenseName: string) => void; 
+  onViewDetailedRulesRequest: (tenseName: string) => void;
 }
 
-export function HindiToEnglishTenseHelper({ apiKey, onWordDetailRequest, onViewDetailedRulesRequest }: HindiToEnglishTenseHelperProps) {
+export function HindiToEnglishTenseHelper({ apiKey, aiProvider, onWordDetailRequest, onViewDetailedRulesRequest }: HindiToEnglishTenseHelperProps) {
   const [hindiInput, setHindiInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -41,16 +42,12 @@ export function HindiToEnglishTenseHelper({ apiKey, onWordDetailRequest, onViewD
 
   const { toast } = useToast();
 
-  const getGenAIModel = useCallback(() => {
+  const checkApiKey = useCallback(() => {
     if (!apiKey) {
-      toast({ title: "API Key Missing", description: "Please set your Gemini API key to use this feature.", variant: "destructive" });
-      return null;
+      toast({ title: "API Key Missing", description: "Please set your API key to use this feature.", variant: "destructive" });
+      return false;
     }
-    const genAI = new GoogleGenerativeAI(apiKey);
-    return genAI.getGenerativeModel({ 
-      model: "gemini-1.5-flash",
-      generationConfig: { responseMimeType: "application/json" }
-    });
+    return true;
   }, [apiKey, toast]);
 
   useEffect(() => {
@@ -106,8 +103,7 @@ export function HindiToEnglishTenseHelper({ apiKey, onWordDetailRequest, onViewD
       return;
     }
     
-    const model = getGenAIModel();
-    if (!model) return;
+    if (!checkApiKey()) return;
 
     setIsLoading(true);
     setError(null);
@@ -125,14 +121,13 @@ export function HindiToEnglishTenseHelper({ apiKey, onWordDetailRequest, onViewD
         3. Create a simple, clear example English sentence that uses this tense and reflects the meaning of the Hindi sentence.
         4. Break down your example English sentence into an array of objects, with each object having a "word" and its "pos" (Part-of-Speech) tag.
         5. Provide the exact key for the English tense (e.g., "PastPerfect") for rule lookup.
-        
+
         Respond with ONLY a JSON object with the following keys: "identifiedEnglishTense", "reasoning", "exampleEnglishSentence", "englishTenseRuleKey".
         If the input is not valid Hindi, respond with { "error": "The provided text does not appear to be a valid Hindi sentence." }.
     `;
 
     try {
-      const result = await model.generateContent(prompt);
-      const responseText = result.response.text();
+      const responseText = await generateAIContent(apiKey!, aiProvider, prompt);
       const parsedResult: AnalyzeHindiForEnglishTenseOutput = JSON.parse(responseText);
 
       if (parsedResult.error) {

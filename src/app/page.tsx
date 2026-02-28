@@ -141,20 +141,23 @@ export default function HomePage() {
             <Button variant="ghost" size="icon" onClick={() => setShowApiKeyDialog(true)}>
               <Settings className="h-5 w-5" />
             </Button>
-            <ApiKeyDialog 
-              isOpen={showApiKeyDialog} 
+            <ApiKeyDialog
+              isOpen={showApiKeyDialog}
               onOpenChange={setShowApiKeyDialog}
               currentApiKey={apiKey}
-              onSave={(newKey) => {
+              currentProvider={aiProvider}
+              onSave={(newKey, provider) => {
                 setApiKey(newKey);
-                localStorage.setItem('gemini_api_key', newKey);
-                toast({ title: "API Key Saved!", description: "Your Gemini API key has been saved." });
+                setAiProvider(provider);
+                localStorage.setItem(`${provider}_api_key`, newKey);
+                localStorage.setItem('ai_provider', provider);
+                toast({ title: "Settings Saved!", description: `Your ${provider === 'groq' ? 'Groq' : 'Gemini'} API key has been saved.` });
                 setShowApiKeyDialog(false);
               }}
               onClear={() => {
                 setApiKey(null);
-                localStorage.removeItem('gemini_api_key');
-                toast({ title: "API Key Removed", description: "Your Gemini API key has been cleared." });
+                localStorage.removeItem(`${aiProvider}_api_key`);
+                toast({ title: "API Key Removed", description: "Your API key has been cleared." });
               }}
             />
           </div>
@@ -174,7 +177,7 @@ export default function HomePage() {
             <KeyRound className="h-5 w-5 text-accent" />
             <AlertTitle>Welcome! Set Your API Key</AlertTitle>
             <AlertDescription>
-              To start generating sentences, please set your Google Gemini API key. Gemini 1.5 Flash is <strong>FREE</strong> to use.
+              To start generating sentences, please set your API key. Both Gemini and Groq are <strong>FREE</strong> to use.
               <Button variant="link" className="p-0 h-auto ml-1 font-bold" onClick={() => setShowApiKeyDialog(true)}>Open settings.</Button>
             </AlertDescription>
           </Alert>
@@ -221,6 +224,7 @@ export default function HomePage() {
                     <Suspense fallback={<div className="flex justify-center p-4"><LoadingSpinner /></div>}>
                       <SentenceModification
                           apiKey={apiKey}
+                          aiProvider={aiProvider}
                           originalSentenceTagged={generatedSentence}
                           onSuggestionSelect={(suggestion) => setGeneratedSentence(suggestion)}
                           onWordDetailRequest={handleWordDetailRequest}
@@ -233,10 +237,12 @@ export default function HomePage() {
                 <Suspense fallback={<div className="flex justify-center p-8"><LoadingSpinner /></div>}>
                   <SentenceAnalyzer
                       apiKey={apiKey}
+                      aiProvider={aiProvider}
                       onWordDetailRequest={handleWordDetailRequest}
                   />
                   <HindiToEnglishTenseHelper
                       apiKey={apiKey}
+                      aiProvider={aiProvider}
                       onWordDetailRequest={handleWordDetailRequest}
                       onViewDetailedRulesRequest={(tense) => handleViewDetailedRules(tense)}
                   />
@@ -266,7 +272,7 @@ export default function HomePage() {
           <Link href="/print-chart" passHref>
              <Button variant="outline" size="sm"><Printer className="mr-2 h-4 w-4"/> View & Print Tense Chart</Button>
           </Link>
-          <p>&copy; {new Date().getFullYear()} SentenceCraft AI. Powered by You and Google AI Studio.</p>
+          <p>&copy; {new Date().getFullYear()} SentenceCraft AI. Powered by You, Gemini & Groq.</p>
         </footer>
       </div>
     </div>

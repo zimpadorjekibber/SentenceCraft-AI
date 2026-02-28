@@ -7,18 +7,19 @@ import { Button } from "@/components/ui/button";
 import { Lightbulb, ThumbsUp, Wand } from 'lucide-react';
 import type { WordPos } from '@/types/ai-types';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { generateAIContent, type AiProvider } from '@/lib/ai-client';
 import { useToast } from '@/hooks/use-toast';
 import { InteractiveSentence } from './interactive-sentence';
 
 interface SentenceModificationProps {
   apiKey: string | null;
+  aiProvider: AiProvider;
   originalSentenceTagged: WordPos[] | null;
   onSuggestionSelect: (suggestionTagged: WordPos[]) => void;
   onWordDetailRequest?: (wordData: WordPos, fullSentenceText: string) => void;
 }
 
-export function SentenceModification({ apiKey, originalSentenceTagged, onSuggestionSelect, onWordDetailRequest }: SentenceModificationProps) {
+export function SentenceModification({ apiKey, aiProvider, originalSentenceTagged, onSuggestionSelect, onWordDetailRequest }: SentenceModificationProps) {
     const [suggestions, setSuggestions] = useState<WordPos[][] | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const { toast } = useToast();
@@ -35,12 +36,6 @@ export function SentenceModification({ apiKey, originalSentenceTagged, onSuggest
 
         setIsLoading(true);
         setSuggestions(null);
-
-        const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({
-            model: "gemini-1.5-flash",
-            generationConfig: { responseMimeType: "application/json" }
-        });
 
         const originalSentenceText = originalSentenceTagged.map(w => w.word).join(' ');
 
@@ -66,8 +61,7 @@ export function SentenceModification({ apiKey, originalSentenceTagged, onSuggest
         `;
 
         try {
-            const result = await model.generateContent(prompt);
-            const responseText = result.response.text();
+            const responseText = await generateAIContent(apiKey, aiProvider, prompt);
             const parsedResult = JSON.parse(responseText);
 
             if (parsedResult.suggestions && Array.isArray(parsedResult.suggestions)) {
