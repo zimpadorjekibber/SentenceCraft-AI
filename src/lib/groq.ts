@@ -4,16 +4,32 @@
  */
 
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
-const GROQ_MODEL = 'llama-3.3-70b-versatile';
+const GROQ_DEFAULT_MODEL = 'llama-3.3-70b-versatile';
+export const GROQ_VISION_MODEL = 'meta-llama/llama-4-scout-17b-16e-instruct';
+
+export interface GroqTextContent {
+  type: 'text';
+  text: string;
+}
+
+export interface GroqImageContent {
+  type: 'image_url';
+  image_url: {
+    url: string; // "data:image/jpeg;base64,..." or a URL
+  };
+}
+
+export type GroqMessageContent = string | (GroqTextContent | GroqImageContent)[];
 
 export interface GroqMessage {
   role: 'system' | 'user' | 'assistant';
-  content: string;
+  content: GroqMessageContent;
 }
 
 export interface GroqOptions {
   temperature?: number;
   jsonMode?: boolean;
+  model?: string;
 }
 
 export async function callGroq(
@@ -21,7 +37,7 @@ export async function callGroq(
   messages: GroqMessage[],
   options: GroqOptions = {}
 ): Promise<string> {
-  const { temperature = 0.7, jsonMode = true } = options;
+  const { temperature = 0.7, jsonMode = true, model = GROQ_DEFAULT_MODEL } = options;
 
   const response = await fetch(GROQ_API_URL, {
     method: 'POST',
@@ -30,7 +46,7 @@ export async function callGroq(
       'Authorization': `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model: GROQ_MODEL,
+      model,
       messages,
       temperature,
       ...(jsonMode ? { response_format: { type: 'json_object' } } : {}),

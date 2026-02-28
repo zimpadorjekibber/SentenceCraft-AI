@@ -28,7 +28,8 @@ import {
   Quote,
   Sparkles,
   Shapes,
-  TextCursorInput
+  TextCursorInput,
+  Camera
 } from 'lucide-react';
 
 import type { WordPos } from '@/types/ai-types';
@@ -40,6 +41,7 @@ import { HighlightedRules } from './highlighted-rules';
 import { GRAMMAR_FEATURE_RULES } from '@/lib/grammar-feature-rules';
 import { generateAIContentAction } from '@/ai/flows/generate-content-action';
 import type { AiProvider } from '@/lib/ai-client';
+import { useCameraOcr } from '@/hooks/use-camera-ocr';
 
 interface SentenceAnalyzerProps {
   apiKey: string | null;
@@ -102,6 +104,20 @@ export function SentenceAnalyzer({ apiKey, aiProvider, onWordDetailRequest }: Se
   const [activeFeatureRuleContent, setActiveFeatureRuleContent] = useState<string | null>(null);
   
   const { toast } = useToast();
+
+  const { fileInputRef: cameraInputRef, isProcessing: isCameraProcessing, triggerCamera, handleFileSelected: handleCameraFile } = useCameraOcr({
+    apiKey,
+    aiProvider,
+    onTextExtracted: (text) => {
+      setInputText(text);
+      resetAllOutputs(false);
+      toast({ title: "Text Extracted!", description: "Image se text nikaal kar input mein daal diya." });
+    },
+    onError: (message) => {
+      toast({ title: "OCR Failed", description: message, variant: "destructive" });
+    },
+    language: 'english',
+  });
 
   const checkApiKey = useCallback(() => {
     if (!apiKey) {
@@ -300,28 +316,45 @@ export function SentenceAnalyzer({ apiKey, aiProvider, onWordDetailRequest }: Se
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Hidden camera file input */}
+        <input
+          ref={cameraInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          className="hidden"
+          onChange={handleCameraFile}
+        />
         <Textarea
-          placeholder="Paste your sentence here..."
+          placeholder="Paste your sentence here, or use mic/camera..."
           value={inputText}
           onChange={(e) => {
             setInputText(e.target.value);
-            resetAllOutputs(false); 
+            resetAllOutputs(false);
           }}
-          rows={3} 
-          disabled={isListening || isLoading} 
+          rows={3}
+          disabled={isListening || isLoading || isCameraProcessing}
           className="text-sm sm:text-base"
         />
         <div className="flex flex-col sm:flex-row items-stretch space-y-2 sm:space-y-0 sm:space-x-2">
-          <Button 
-            onClick={handleAnalyze} 
-            disabled={isLoading || isListening || !inputText.trim()} 
+          <Button
+            onClick={handleAnalyze}
+            disabled={isLoading || isListening || isCameraProcessing || !inputText.trim()}
             className="flex-grow flex items-center justify-center text-sm"
           >
             {isLoading && currentAction === 'Analysis' ? <LoadingSpinner inline /> : <><ScanText className="mr-2 h-4 w-4" /> Analyze Sentence</>}
           </Button>
           <Button
+            variant="outline" size="icon" onClick={triggerCamera}
+            disabled={isLoading || isListening || isCameraProcessing}
+            className="shrink-0"
+            title="Take photo to extract text"
+          >
+            {isCameraProcessing ? <LoadingSpinner inline /> : <Camera className="h-5 w-5 text-primary" />}
+          </Button>
+          <Button
             variant="outline" size="icon" onClick={handleMicClick}
-            disabled={isLoading || !isSpeechApiSupported} 
+            disabled={isLoading || isCameraProcessing || !isSpeechApiSupported}
             className={cn("shrink-0", isListening && "bg-red-500 hover:bg-red-600 text-white")}
           >
             {isListening ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5 text-primary" />}

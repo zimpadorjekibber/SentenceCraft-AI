@@ -10,12 +10,13 @@ import { LoadingSpinner } from './loading-spinner';
 import { InteractiveSentence } from './interactive-sentence';
 import { HighlightedRules } from './highlighted-rules';
 import { useToast } from "@/hooks/use-toast";
-import { Languages, Brain, AlertCircle, Mic, MicOff, BookOpen } from 'lucide-react';
+import { Languages, Brain, AlertCircle, Mic, MicOff, BookOpen, Camera } from 'lucide-react';
 import type { WordPos } from '@/types/ai-types';
 import { cn } from '@/lib/utils';
 import { generateAIContentAction } from '@/ai/flows/generate-content-action';
 import type { AiProvider } from '@/lib/ai-client';
 import { useHindiTransliteration } from '@/hooks/use-hindi-transliteration';
+import { useCameraOcr } from '@/hooks/use-camera-ocr';
 
 interface AnalyzeHindiForEnglishTenseOutput {
   identifiedEnglishTense: string;
@@ -55,6 +56,22 @@ export function HindiToEnglishTenseHelper({ apiKey, aiProvider, onWordDetailRequ
     applySuggestion,
     clearSuggestions,
   } = useHindiTransliteration();
+
+  const { fileInputRef: cameraInputRef, isProcessing: isCameraProcessing, triggerCamera, handleFileSelected: handleCameraFile } = useCameraOcr({
+    apiKey,
+    aiProvider,
+    onTextExtracted: (text) => {
+      setHindiInput(text);
+      setAnalysisResult(null);
+      setError(null);
+      clearSuggestions();
+      toast({ title: "Text Extracted!", description: "Image se Hindi text nikaal kar input mein daal diya." });
+    },
+    onError: (message) => {
+      toast({ title: "OCR Failed", description: message, variant: "destructive" });
+    },
+    language: 'hindi',
+  });
 
   const checkApiKey = useCallback(() => {
     if (!apiKey) {
@@ -240,10 +257,19 @@ export function HindiToEnglishTenseHelper({ apiKey, aiProvider, onWordDetailRequ
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Hidden camera file input */}
+        <input
+          ref={cameraInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          className="hidden"
+          onChange={handleCameraFile}
+        />
         <div className="relative">
           <Textarea
             ref={textareaRef}
-            placeholder="Type in English for Hindi suggestions... (e.g., main school ja raha hoon)"
+            placeholder="Type in English for Hindi suggestions, or use mic/camera..."
             value={hindiInput}
             onChange={handleTextareaChange}
             onKeyDown={handleTextareaKeyDown}
@@ -252,7 +278,7 @@ export function HindiToEnglishTenseHelper({ apiKey, aiProvider, onWordDetailRequ
               setTimeout(() => clearSuggestions(), 150);
             }}
             rows={3}
-            disabled={isListening || isLoading}
+            disabled={isListening || isLoading || isCameraProcessing}
             className="text-sm sm:text-base font-body"
             lang="hi"
           />
@@ -293,14 +319,22 @@ export function HindiToEnglishTenseHelper({ apiKey, aiProvider, onWordDetailRequ
         <div className="flex flex-col sm:flex-row items-stretch space-y-2 sm:space-y-0 sm:space-x-2">
             <Button
               onClick={handleAnalyzeHindi}
-              disabled={isLoading || isListening || !hindiInput.trim()}
+              disabled={isLoading || isListening || isCameraProcessing || !hindiInput.trim()}
               className="flex-grow flex items-center justify-center text-sm"
             >
               {isLoading ? <LoadingSpinner inline /> : <><Brain className="mr-2 h-4 w-4" /> Find English Tense</>}
             </Button>
             <Button
+                variant="outline" size="icon" onClick={triggerCamera}
+                disabled={isLoading || isListening || isCameraProcessing}
+                className="shrink-0"
+                title="Take photo to extract Hindi text"
+            >
+                {isCameraProcessing ? <LoadingSpinner inline /> : <Camera className="h-5 w-5 text-primary" />}
+            </Button>
+            <Button
                 variant="outline" size="icon" onClick={handleMicClick}
-                disabled={isLoading || !isSpeechApiSupported}
+                disabled={isLoading || isCameraProcessing || !isSpeechApiSupported}
                 className={cn("shrink-0", isListening && "bg-red-500 hover:bg-red-600 text-white")}
             >
                 {isListening ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5 text-primary" />}
