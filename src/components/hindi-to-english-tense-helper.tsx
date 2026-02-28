@@ -14,6 +14,7 @@ import { Languages, Brain, AlertCircle, Mic, MicOff, BookOpen } from 'lucide-rea
 import type { WordPos } from '@/types/ai-types';
 import { cn } from '@/lib/utils';
 import { generateAIContent, type AiProvider } from '@/lib/ai-client';
+import { useHindiTransliteration } from '@/hooks/use-hindi-transliteration';
 
 interface AnalyzeHindiForEnglishTenseOutput {
   identifiedEnglishTense: string;
@@ -35,12 +36,24 @@ export function HindiToEnglishTenseHelper({ apiKey, aiProvider, onWordDetailRequ
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [analysisResult, setAnalysisResult] = useState<AnalyzeHindiForEnglishTenseOutput | null>(null);
-  
+
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const [isSpeechApiSupported, setIsSpeechApiSupported] = useState(false);
 
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const suggestionsRef = useRef<HTMLDivElement | null>(null);
+  const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(0);
+
   const { toast } = useToast();
+
+  const {
+    suggestions,
+    currentWord,
+    fetchSuggestions,
+    applySuggestion,
+    clearSuggestions,
+  } = useHindiTransliteration();
 
   const checkApiKey = useCallback(() => {
     if (!apiKey) {
@@ -89,20 +102,76 @@ export function HindiToEnglishTenseHelper({ apiKey, aiProvider, onWordDetailRequ
     if (isListening) {
       recognitionRef.current.stop();
     } else {
-      setHindiInput(''); 
+      setHindiInput('');
       setAnalysisResult(null);
       setError(null);
+      clearSuggestions();
       recognitionRef.current.start();
+    }
+  };
+
+  const handleSelectSuggestion = useCallback((suggestion: string) => {
+    const { newText, newCursorPos } = applySuggestion(hindiInput, suggestion);
+    setHindiInput(newText);
+    setSelectedSuggestionIndex(0);
+    // Restore focus and cursor position
+    setTimeout(() => {
+      if (textareaRef.current) {
+        textareaRef.current.focus();
+        textareaRef.current.setSelectionRange(newCursorPos, newCursorPos);
+      }
+    }, 0);
+  }, [applySuggestion, hindiInput]);
+
+  const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value;
+    setHindiInput(value);
+    if (analysisResult) setAnalysisResult(null);
+    if (error) setError(null);
+    setSelectedSuggestionIndex(0);
+
+    const cursorPos = e.target.selectionStart ?? value.length;
+    fetchSuggestions(value, cursorPos);
+  };
+
+  const handleTextareaKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (suggestions.length === 0) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setSelectedSuggestionIndex((prev) =>
+        prev < suggestions.length - 1 ? prev + 1 : 0
+      );
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setSelectedSuggestionIndex((prev) =>
+        prev > 0 ? prev - 1 : suggestions.length - 1
+      );
+    } else if (e.key === 'Enter' || e.key === 'Tab') {
+      // Select the highlighted suggestion
+      if (suggestions[selectedSuggestionIndex]) {
+        e.preventDefault();
+        handleSelectSuggestion(suggestions[selectedSuggestionIndex]);
+      }
+    } else if (e.key === 'Escape') {
+      clearSuggestions();
+    } else if (e.key === ' ') {
+      // On space, auto-select the first suggestion
+      if (suggestions.length > 0 && currentWord.length > 0) {
+        e.preventDefault();
+        handleSelectSuggestion(suggestions[0]);
+      }
     }
   };
 
   const handleAnalyzeHindi = async () => {
     if (isListening) recognitionRef.current?.stop();
+    clearSuggestions();
     if (!hindiInput.trim()) {
       setError("कृपया विश्लेषण के लिए एक हिंदी वाक्य दर्ज करें।");
       return;
     }
-    
+
     if (!checkApiKey()) return;
 
     setIsLoading(true);
@@ -152,23 +221,60 @@ export function HindiToEnglishTenseHelper({ apiKey, aiProvider, onWordDetailRequ
           Hindi to English Tense Helper
         </CardTitle>
         <CardDescription className="text-xs sm:text-sm text-muted-foreground pt-1">
-          Type or speak a Hindi sentence. We'll suggest the best English tense and provide an example.
+          Type in English to get Hindi suggestions (e.g., type "main" → मैं). Press <kbd className="px-1 py-0.5 bg-muted rounded text-xs font-mono">Space</kbd> or <kbd className="px-1 py-0.5 bg-muted rounded text-xs font-mono">Enter</kbd> to select. You can also speak in Hindi.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <Textarea
-          placeholder="अपना हिंदी वाक्य यहाँ लिखें..."
-          value={hindiInput}
-          onChange={(e) => {
-            setHindiInput(e.target.value);
-            if (analysisResult) setAnalysisResult(null);
-            if (error) setError(null);
-          }}
-          rows={3}
-          disabled={isListening || isLoading}
-          className="text-sm sm:text-base font-body"
-          lang="hi"
-        />
+        <div className="relative">
+          <Textarea
+            ref={textareaRef}
+            placeholder="Type in English for Hindi suggestions... (e.g., main school ja raha hoon)"
+            value={hindiInput}
+            onChange={handleTextareaChange}
+            onKeyDown={handleTextareaKeyDown}
+            onBlur={() => {
+              // Delay clearing so click on suggestion works
+              setTimeout(() => clearSuggestions(), 150);
+            }}
+            rows={3}
+            disabled={isListening || isLoading}
+            className="text-sm sm:text-base font-body"
+            lang="hi"
+          />
+          {/* Hindi Transliteration Suggestions Dropdown */}
+          {suggestions.length > 0 && (
+            <div
+              ref={suggestionsRef}
+              className="absolute left-0 right-0 z-50 mt-1 bg-background border border-border rounded-lg shadow-lg overflow-hidden"
+            >
+              <div className="px-3 py-1.5 bg-muted/50 border-b border-border">
+                <span className="text-xs text-muted-foreground">
+                  Hindi suggestions for "<span className="font-semibold text-primary">{currentWord}</span>"
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-1 p-2">
+                {suggestions.map((s, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onMouseDown={(e) => {
+                      e.preventDefault(); // Prevent textarea blur
+                      handleSelectSuggestion(s);
+                    }}
+                    className={cn(
+                      "px-3 py-1.5 rounded-md text-sm font-medium transition-colors cursor-pointer",
+                      i === selectedSuggestionIndex
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted hover:bg-muted/80 text-foreground"
+                    )}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
         <div className="flex flex-col sm:flex-row items-stretch space-y-2 sm:space-y-0 sm:space-x-2">
             <Button
               onClick={handleAnalyzeHindi}
@@ -204,7 +310,7 @@ export function HindiToEnglishTenseHelper({ apiKey, aiProvider, onWordDetailRequ
                 <h4 className="font-semibold text-muted-foreground">Suggested Tense:</h4>
                 <p className="text-primary font-bold text-base sm:text-lg">{analysisResult.identifiedEnglishTense}</p>
               </div>
-              
+
               {analysisResult.reasoning && (
                 <div>
                   <h4 className="font-semibold text-muted-foreground">Reasoning:</h4>
@@ -226,8 +332,8 @@ export function HindiToEnglishTenseHelper({ apiKey, aiProvider, onWordDetailRequ
               )}
 
               {analysisResult.englishTenseRuleKey && (
-                <Button 
-                  variant="outline" size="sm" 
+                <Button
+                  variant="outline" size="sm"
                   onClick={() => onViewDetailedRulesRequest(analysisResult.englishTenseRuleKey)}
                   className="text-xs sm:text-sm mt-2"
                   >
