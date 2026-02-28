@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Lightbulb, ThumbsUp, Wand } from 'lucide-react';
 import type { WordPos } from '@/types/ai-types';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { generateAIContent, type AiProvider } from '@/lib/ai-client';
+import { generateAIContentAction } from '@/ai/flows/generate-content-action';
+import type { AiProvider } from '@/lib/ai-client';
 import { useToast } from '@/hooks/use-toast';
 import { InteractiveSentence } from './interactive-sentence';
 
@@ -61,7 +62,7 @@ export function SentenceModification({ apiKey, aiProvider, originalSentenceTagge
         `;
 
         try {
-            const responseText = await generateAIContent(apiKey, aiProvider, prompt);
+            const responseText = await generateAIContentAction(apiKey, aiProvider, prompt);
             const parsedResult = JSON.parse(responseText);
 
             if (parsedResult.suggestions && Array.isArray(parsedResult.suggestions)) {

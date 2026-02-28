@@ -13,7 +13,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Languages, Brain, AlertCircle, Mic, MicOff, BookOpen } from 'lucide-react';
 import type { WordPos } from '@/types/ai-types';
 import { cn } from '@/lib/utils';
-import { generateAIContent, type AiProvider } from '@/lib/ai-client';
+import { generateAIContentAction } from '@/ai/flows/generate-content-action';
+import type { AiProvider } from '@/lib/ai-client';
 import { useHindiTransliteration } from '@/hooks/use-hindi-transliteration';
 
 interface AnalyzeHindiForEnglishTenseOutput {
@@ -196,7 +197,7 @@ export function HindiToEnglishTenseHelper({ apiKey, aiProvider, onWordDetailRequ
     `;
 
     try {
-      const responseText = await generateAIContent(apiKey!, aiProvider, prompt);
+      const responseText = await generateAIContentAction(apiKey!, aiProvider, prompt);
       const parsedResult: AnalyzeHindiForEnglishTenseOutput = JSON.parse(responseText);
 
       if (parsedResult.error) {

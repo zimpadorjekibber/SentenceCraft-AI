@@ -37,7 +37,8 @@ import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { HighlightedRules } from './highlighted-rules';
 import { GRAMMAR_FEATURE_RULES } from '@/lib/grammar-feature-rules';
-import { generateAIContent, type AiProvider } from '@/lib/ai-client';
+import { generateAIContentAction } from '@/ai/flows/generate-content-action';
+import type { AiProvider } from '@/lib/ai-client';
 
 interface SentenceAnalyzerProps {
   apiKey: string | null;
@@ -175,7 +176,7 @@ export function SentenceAnalyzer({ apiKey, aiProvider, onWordDetailRequest }: Se
     const prompt = promptGenerator();
 
     try {
-        const responseText = await generateAIContent(apiKey!, aiProvider, prompt);
+        const responseText = await generateAIContentAction(apiKey!, aiProvider, prompt);
         const parsedResult = JSON.parse(responseText);
 
         if (parsedResult.error) {
