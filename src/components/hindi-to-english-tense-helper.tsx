@@ -103,7 +103,13 @@ export function HindiToEnglishTenseHelper({ apiKey, aiProvider, onWordDetailRequ
         setHindiInput(currentTranscript);
       };
       recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-        toast({ title: "Speech Error", description: `Error: ${event.error}`, variant: "destructive" });
+        const errorMessages: Record<string, string> = {
+          'not-allowed': 'Microphone permission denied। कृपया browser settings में mic allow करें।',
+          'no-speech': 'कोई आवाज़ नहीं सुनाई दी। फिर से बोलें।',
+          'network': 'Network error। Internet connection check करें।',
+          'aborted': 'Speech recognition बंद हो गया।',
+        };
+        toast({ title: "Speech Error", description: errorMessages[event.error] || `Error: ${event.error}`, variant: "destructive" });
         setIsListening(false);
       };
       recognition.onend = () => setIsListening(false);
@@ -115,11 +121,24 @@ export function HindiToEnglishTenseHelper({ apiKey, aiProvider, onWordDetailRequ
     };
   }, [toast]);
 
-  const handleMicClick = () => {
+  const handleMicClick = async () => {
     if (!isSpeechApiSupported || !recognitionRef.current) return;
     if (isListening) {
       recognitionRef.current.stop();
     } else {
+      // Request mic permission first (required on mobile browsers)
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        // Stop the stream immediately - we just needed the permission
+        stream.getTracks().forEach(track => track.stop());
+      } catch (err) {
+        toast({
+          title: "Microphone Permission Denied",
+          description: "कृपया browser settings में जाकर microphone की permission allow करें।",
+          variant: "destructive",
+        });
+        return;
+      }
       setHindiInput('');
       setAnalysisResult(null);
       setError(null);
