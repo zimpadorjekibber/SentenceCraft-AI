@@ -228,10 +228,22 @@ export function SentenceAnalyzer({ apiKey, aiProvider, onWordDetailRequest }: Se
 
   const handleAnalyze = () => {
     handleGenericAction("Analysis", () => `
-        You are an English grammar expert. Analyze the following sentence.
+        You are an English grammar expert. Analyze the following sentence with CONTEXTUAL accuracy.
         Sentence: "${inputText}"
+
+        CRITICAL RULES for POS tagging:
+        - Tag each word based on its ACTUAL FUNCTION in THIS sentence, not just its dictionary default.
+        - Words like "who", "which", "that" can be Pronouns OR Conjunctions depending on context:
+          * "Who is there?" → "Who" = Pronoun (Interrogative Pronoun)
+          * "The boy who came here is smart." → "who" = Conjunction (Relative Pronoun acting as conjunction connecting clauses)
+        - Words like "that" can be Determiner, Pronoun, OR Conjunction:
+          * "That book is good." → "That" = Determiner
+          * "I know that he is coming." → "that" = Conjunction
+        - "before", "after", "since", "until" can be Preposition OR Conjunction depending on whether they connect clauses or relate to nouns.
+        - Always consider the SENTENCE STRUCTURE to determine the correct POS.
+
         Task:
-        1. Break down into an array of objects, each with "word" (string) and "pos" (Part-of-Speech tag string like "Noun", "Verb", "Adjective", "Adverb", "Pronoun", "Preposition", "Conjunction", "Determiner", "Auxiliary", "Punctuation", etc.).
+        1. Break down into an array of objects, each with "word" (string) and "pos" (Part-of-Speech tag string like "Noun", "Verb", "Adjective", "Adverb", "Pronoun", "Preposition", "Conjunction", "Determiner", "Auxiliary", "Punctuation", etc.). Use the CONTEXTUALLY CORRECT POS.
         2. Translate into natural Hindi.
         3. Respond with ONLY a valid JSON object (no extra text): { "taggedSentence": [{"word":"The","pos":"Determiner"},{"word":"cat","pos":"Noun"},...], "hindiTranslation": "..." }
     `);
