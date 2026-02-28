@@ -189,10 +189,11 @@ export function HindiToEnglishTenseHelper({ apiKey, aiProvider, onWordDetailRequ
         1. Identify the most suitable English tense (e.g., "Present Perfect", "Past Indefinite").
         2. Provide a clear, concise reasoning for your choice, referencing cues from the Hindi sentence (like "रहा था", "चुका है", etc.).
         3. Create a simple, clear example English sentence that uses this tense and reflects the meaning of the Hindi sentence.
-        4. Break down your example English sentence into an array of objects, with each object having a "word" and its "pos" (Part-of-Speech) tag.
+        4. Break down your example English sentence into an array of objects, each with "word" (string) and "pos" (Part-of-Speech tag string like "Noun", "Verb", "Adjective", "Adverb", "Pronoun", "Preposition", "Conjunction", "Determiner", "Auxiliary", "Punctuation", etc.).
         5. Provide the exact key for the English tense (e.g., "PastPerfect") for rule lookup.
 
-        Respond with ONLY a JSON object with the following keys: "identifiedEnglishTense", "reasoning", "exampleEnglishSentence", "englishTenseRuleKey".
+        Respond with ONLY a valid JSON object (no extra text):
+        { "identifiedEnglishTense": "Present Continuous", "reasoning": "...", "exampleEnglishSentence": [{"word":"He","pos":"Pronoun"},{"word":"is","pos":"Auxiliary"},{"word":"going","pos":"Verb"},{"word":".","pos":"Punctuation"}], "englishTenseRuleKey": "PresentContinuous" }
         If the input is not valid Hindi, respond with { "error": "The provided text does not appear to be a valid Hindi sentence." }.
     `;
 
@@ -204,6 +205,19 @@ export function HindiToEnglishTenseHelper({ apiKey, aiProvider, onWordDetailRequ
         setError(parsedResult.error);
         toast({ title: "Analysis Failed", description: parsedResult.error, variant: "destructive" });
       } else {
+        // Validate exampleEnglishSentence is a proper WordPos array
+        if (parsedResult.exampleEnglishSentence && !Array.isArray(parsedResult.exampleEnglishSentence)) {
+          // AI returned a string instead of array - convert it
+          const sentenceStr = String(parsedResult.exampleEnglishSentence);
+          parsedResult.exampleEnglishSentence = sentenceStr.split(/\s+/).map(word => {
+            const cleanWord = word.replace(/[.,!?;:]$/, '');
+            const punct = word.match(/[.,!?;:]$/)?.[0];
+            const result: WordPos[] = [];
+            if (cleanWord) result.push({ word: cleanWord, pos: 'Unknown' });
+            if (punct) result.push({ word: punct, pos: 'Punctuation' });
+            return result;
+          }).flat();
+        }
         setAnalysisResult(parsedResult);
       }
     } catch (e: any) {

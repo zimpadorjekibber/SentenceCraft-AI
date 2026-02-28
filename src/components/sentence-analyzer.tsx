@@ -16,18 +16,19 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { 
-  ScanText, 
-  Info, 
-  Mic, 
-  MicOff, 
-  Repeat, 
-  BookOpenCheck, 
-  MessageCircleQuestion, 
-  HelpCircle, 
-  Quote, 
-  Sparkles, 
-  Shapes 
+import {
+  ScanText,
+  Info,
+  Mic,
+  MicOff,
+  Repeat,
+  BookOpenCheck,
+  MessageCircleQuestion,
+  HelpCircle,
+  Quote,
+  Sparkles,
+  Shapes,
+  TextCursorInput
 } from 'lucide-react';
 
 import type { WordPos } from '@/types/ai-types';
@@ -411,6 +412,17 @@ export function SentenceAnalyzer({ apiKey, aiProvider, onWordDetailRequest }: Se
                   {isLoading && currentAction === 'Article Check' ? <LoadingSpinner inline /> : "Check Article Usage"}
                 </Button>
                 <Button variant="ghost" size="sm" onClick={() => handleFeatureInfoClick("Articles")} className="text-xs h-8 w-full"><BookOpenCheck className="mr-2 h-3 w-3" /> View Article Rules</Button>
+              </div>
+            </div>
+
+            {/* Punctuate */}
+            <div className="space-y-2 p-3 border rounded-md flex flex-col justify-between">
+              <h4 className="text-md font-semibold text-primary flex items-center"><TextCursorInput className="mr-2 h-4 w-4" />Punctuate</h4>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => handleGenericAction("Punctuation", () => `You are an English grammar expert. Add correct punctuation to the following sentence. The sentence may be missing commas, periods, question marks, exclamation marks, apostrophes, quotation marks, colons, semicolons, or capital letters at the start. Sentence: "${inputText}". Task: 1. Add all missing punctuation marks and fix capitalization. 2. Explain what punctuation was added and why, referencing punctuation rules. 3. Break down the punctuated sentence into an array of objects, each with "word" (string) and "pos" (Part-of-Speech tag string like "Noun", "Verb", "Adjective", "Adverb", "Pronoun", "Preposition", "Conjunction", "Determiner", "Auxiliary", "Punctuation", etc.). 4. Translate the punctuated sentence into natural Hindi. Respond with ONLY a valid JSON object (no extra text): { "rewrittenSentence": [{"word":"He","pos":"Pronoun"},{"word":"said","pos":"Verb"},{"word":",","pos":"Punctuation"},{"word":"Hello","pos":"Interjection"},{"word":"!","pos":"Punctuation"}], "hindiTranslation": "...", "explanation": "..." }`)} disabled={isLoading || !inputText.trim()} className="flex-grow text-xs h-8">
+                  {isLoading && currentAction === 'Punctuation' ? <LoadingSpinner inline /> : "Punctuate"}
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => handleFeatureInfoClick("Punctuation")} className="h-8"><BookOpenCheck className="h-4 w-4" /></Button>
               </div>
             </div>
 

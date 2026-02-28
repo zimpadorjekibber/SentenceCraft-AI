@@ -50,7 +50,7 @@ const POS_HINDI_MAP: Record<string, string> = {
 };
 
 export function InteractiveSentence({ taggedSentence, onWordDetailRequest, sentenceIdentifier = "s" }: InteractiveSentenceProps) {
-  if (!taggedSentence || taggedSentence.length === 0) return null;
+  if (!taggedSentence || !Array.isArray(taggedSentence) || taggedSentence.length === 0) return null;
 
   const fullSentenceText = taggedSentence.map(tw => tw.word).join(" ");
 

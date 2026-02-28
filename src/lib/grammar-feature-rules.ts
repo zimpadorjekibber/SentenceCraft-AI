@@ -86,4 +86,37 @@ Used to define a noun as specific or unspecific.
 - Use 'The' for rivers, oceans, mountain ranges, and holy books.
 - Do not use articles for proper nouns (names), languages, or most countries.
 `,
+  "Punctuation": `
+**Punctuation Marks (विराम चिह्न):**
+
+1. **Period / Full Stop (.)** - पूर्ण विराम:
+   - Used at the end of a declarative sentence (statement).
+   - Example: He <pos type="verb">goes</pos> to school<pos type="punctuation_mark">.</pos>
+
+2. **Question Mark (?)** - प्रश्नवाचक चिह्न:
+   - Used at the end of a question.
+   - Example: <pos type="auxiliary">Do</pos> you <pos type="verb">like</pos> tea<pos type="punctuation_mark">?</pos>
+
+3. **Exclamation Mark (!)** - विस्मयादिबोधक चिह्न:
+   - Used to express strong emotion or surprise.
+   - Example: <pos type="interjection">Wow</pos><pos type="punctuation_mark">!</pos> That is amazing<pos type="punctuation_mark">!</pos>
+
+4. **Comma (,)** - अल्प विराम:
+   - Used to separate items in a list, after introductory words, and before conjunctions in compound sentences.
+   - Example: I bought apples<pos type="punctuation_mark">,</pos> bananas<pos type="punctuation_mark">,</pos> and oranges<pos type="punctuation_mark">.</pos>
+
+5. **Apostrophe (')** - ऊर्ध्व विराम:
+   - Used for contractions (don't, can't) and possessives (Ram's book).
+   - Example: It<pos type="punctuation_mark">'</pos>s Ram<pos type="punctuation_mark">'</pos>s book<pos type="punctuation_mark">.</pos>
+
+6. **Quotation Marks (" ")** - उद्धरण चिह्न:
+   - Used for direct speech and titles.
+   - Example: He said<pos type="punctuation_mark">,</pos> <pos type="punctuation_mark">"</pos>I am happy<pos type="punctuation_mark">.</pos><pos type="punctuation_mark">"</pos>
+
+**Key Rules:**
+- Always capitalize the first letter of a sentence.
+- Use a comma before coordinating conjunctions (and, but, or) in compound sentences.
+- Use a comma after introductory phrases (However, Moreover, In fact).
+- End every sentence with appropriate punctuation (. ? !).
+`,
 };
