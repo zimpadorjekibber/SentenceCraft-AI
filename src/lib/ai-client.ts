@@ -1,22 +1,15 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import { callGroq } from './groq';
+import { generateAIContentAction } from '@/ai/flows/generate-content-action';
 
 export type AiProvider = 'gemini' | 'groq';
 
+/**
+ * Wrapper that delegates AI content generation to a server action.
+ * This avoids CORS issues when calling APIs like Groq from the browser.
+ */
 export async function generateAIContent(
   apiKey: string,
   provider: AiProvider,
   prompt: string
 ): Promise<string> {
-  if (provider === 'groq') {
-    return callGroq(apiKey, [{ role: 'user', content: prompt }], { jsonMode: true });
-  }
-
-  const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({
-    model: 'gemini-1.5-flash',
-    generationConfig: { responseMimeType: 'application/json' },
-  });
-  const result = await model.generateContent(prompt);
-  return result.response.text();
+  return generateAIContentAction(apiKey, provider, prompt);
 }

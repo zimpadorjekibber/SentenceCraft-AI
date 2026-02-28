@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback } from 'react';
 
-const GOOGLE_INPUT_TOOLS_URL =
-  'https://inputtools.google.com/request?itc=hi-t-i0-und&num=5';
+// Use our own API proxy to avoid CORS issues with Google Input Tools
+const TRANSLITERATE_API_URL = '/api/transliterate';
 
 export interface TransliterationState {
   suggestions: string[];
@@ -85,7 +85,7 @@ export function useHindiTransliteration() {
 
         try {
           const res = await fetch(
-            `${GOOGLE_INPUT_TOOLS_URL}&text=${encodeURIComponent(currentWord)}`,
+            `${TRANSLITERATE_API_URL}?text=${encodeURIComponent(currentWord)}`,
             { signal: controller.signal }
           );
           const data = await res.json();
