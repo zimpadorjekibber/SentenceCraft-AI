@@ -18,7 +18,7 @@ const SentenceModification = lazy(() => import('@/components/sentence-modificati
 const SentenceAnalyzer = lazy(() => import('@/components/sentence-analyzer').then(m => ({ default: m.SentenceAnalyzer })));
 const HindiToEnglishTenseHelper = lazy(() => import('@/components/hindi-to-english-tense-helper').then(m => ({ default: m.HindiToEnglishTenseHelper })));
 import { AuthButton } from '@/components/auth-button';
-import { ApiKeyDialog } from '@/components/api-key-dialog';
+import { ApiKeyDialog, type AiProvider } from '@/components/api-key-dialog';
 
 // AI Server Actions
 import { generateSentenceAction } from '@/ai/flows/sentence-generator';
@@ -43,6 +43,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 
 export default function HomePage() {
   const [apiKey, setApiKey] = useState<string | null>(null);
+  const [aiProvider, setAiProvider] = useState<AiProvider>('gemini');
   const [wordInputs, setWordInputs] = useState<WordInputs>({
     subject: '', verb: '', object: '', adjective: '', adverb: '', 
     preposition: '', conjunction: '', determiner: '', interjection: '', otherWords: ''
@@ -58,9 +59,11 @@ export default function HomePage() {
 
   const { toast } = useToast();
 
-  // Load API key from local storage on mount to avoid hydration mismatch
+  // Load API key and provider from local storage on mount to avoid hydration mismatch
   useEffect(() => {
-    const storedApiKey = localStorage.getItem('gemini_api_key');
+    const storedProvider = (localStorage.getItem('ai_provider') as AiProvider) || 'gemini';
+    setAiProvider(storedProvider);
+    const storedApiKey = localStorage.getItem(`${storedProvider}_api_key`);
     if (storedApiKey) {
       setApiKey(storedApiKey);
     }
@@ -76,7 +79,7 @@ export default function HomePage() {
 
   const handleGenerateSentence = async () => {
     if (!apiKey) {
-      toast({ title: "API Key Missing", description: "Please set your Gemini API key in the settings.", variant: "destructive" });
+      toast({ title: "API Key Missing", description: "Please set your API key in the settings.", variant: "destructive" });
       setShowApiKeyDialog(true);
       return;
     }
@@ -94,7 +97,8 @@ export default function HomePage() {
       const result = await generateSentenceAction({
         ...wordInputs,
         tense: selectedTense,
-        apiKey: apiKey
+        apiKey: apiKey,
+        provider: aiProvider
       });
       
       if (result?.sentence?.length) {
