@@ -214,21 +214,23 @@ export function SentenceAnalyzer({ apiKey, aiProvider, onWordDetailRequest }: Se
         You are an English grammar expert. Analyze the following sentence.
         Sentence: "${inputText}"
         Task:
-        1. Break down into an array of objects with "word" and "pos".
+        1. Break down into an array of objects, each with "word" (string) and "pos" (Part-of-Speech tag string like "Noun", "Verb", "Adjective", "Adverb", "Pronoun", "Preposition", "Conjunction", "Determiner", "Auxiliary", "Punctuation", etc.).
         2. Translate into natural Hindi.
-        3. Respond with JSON object: { "taggedSentence": [...], "hindiTranslation": "..." }
+        3. Respond with ONLY a valid JSON object (no extra text): { "taggedSentence": [{"word":"The","pos":"Determiner"},{"word":"cat","pos":"Noun"},...], "hindiTranslation": "..." }
     `);
   };
 
   const handleMakeQuestion = () => {
     handleGenericAction("Question Generation", () => `
-        Transform the sentence "${inputText}" into a question of type "${selectedQuestionType}".
+        You are an English grammar expert. Transform the following sentence into a "${selectedQuestionType}" type question.
+        Sentence: "${inputText}"
         Task:
-        1. Generate the question.
-        2. Explain the rule for forming this type of question.
-        3. Tag the new sentence with POS.
-        4. Translate to Hindi.
-        Respond with JSON: { "generatedQuestion": [...], "hindiTranslation": "...", "explanation": "..." }
+        1. Generate the question from the given sentence.
+        2. Explain the grammar rule for forming this type of question in simple language.
+        3. Break down the generated question into an array of objects, each with "word" (string) and "pos" (Part-of-Speech tag string like "Noun", "Verb", "Adjective", "Adverb", "Pronoun", "Preposition", "Conjunction", "Determiner", "Auxiliary", "Punctuation", etc.).
+        4. Translate the generated question into natural Hindi.
+        Respond with ONLY a valid JSON object (no extra text):
+        { "generatedQuestion": [{"word":"What","pos":"Pronoun"},{"word":"do","pos":"Auxiliary"},...], "hindiTranslation": "...", "explanation": "..." }
     `);
   };
 
@@ -238,37 +240,43 @@ export function SentenceAnalyzer({ apiKey, aiProvider, onWordDetailRequest }: Se
         return;
     }
     handleGenericAction("Modal Rewrite", () => `
-        Rewrite the sentence "${inputText}" using the modal verb "${selectedModalVerbForRewrite}".
+        You are an English grammar expert. Rewrite the following sentence using the modal verb "${selectedModalVerbForRewrite}".
+        Sentence: "${inputText}"
         Task:
-        1. Rewrite the sentence correctly.
-        2. Explain the modal verb usage rule.
-        3. Tag the new sentence with POS.
-        4. Translate to Hindi.
-        Respond with JSON: { "rewrittenSentence": [...], "hindiTranslation": "...", "explanation": "..." }
+        1. Rewrite the sentence correctly using "${selectedModalVerbForRewrite}".
+        2. Explain the modal verb usage rule in simple language.
+        3. Break down the rewritten sentence into an array of objects, each with "word" (string) and "pos" (Part-of-Speech tag string like "Noun", "Verb", "Adjective", "Adverb", "Pronoun", "Preposition", "Conjunction", "Determiner", "Auxiliary", "Punctuation", etc.).
+        4. Translate the rewritten sentence into natural Hindi.
+        Respond with ONLY a valid JSON object (no extra text):
+        { "rewrittenSentence": [{"word":"He","pos":"Pronoun"},{"word":"can","pos":"Auxiliary"},...], "hindiTranslation": "...", "explanation": "..." }
     `);
   };
 
   const handleTransformConditional = () => {
     handleGenericAction("Conditional Transformation", () => `
-        Transform the sentence "${inputText}" into a ${selectedConditional} Conditional sentence.
+        You are an English grammar expert. Transform the following sentence into a ${selectedConditional} Conditional sentence.
+        Sentence: "${inputText}"
         Task:
-        1. Rewrite as a ${selectedConditional} conditional.
-        2. Explain the conditional rule applied.
-        3. Tag the new sentence with POS.
-        4. Translate to Hindi.
-        Respond with JSON: { "transformedSentence": [...], "hindiTranslation": "...", "explanation": "..." }
+        1. Rewrite the sentence as a ${selectedConditional} conditional.
+        2. Explain the conditional rule applied in simple language.
+        3. Break down the transformed sentence into an array of objects, each with "word" (string) and "pos" (Part-of-Speech tag string like "Noun", "Verb", "Adjective", "Adverb", "Pronoun", "Preposition", "Conjunction", "Determiner", "Auxiliary", "Punctuation", etc.).
+        4. Translate the transformed sentence into natural Hindi.
+        Respond with ONLY a valid JSON object (no extra text):
+        { "transformedSentence": [{"word":"If","pos":"Conjunction"},{"word":"I","pos":"Pronoun"},...], "hindiTranslation": "...", "explanation": "..." }
     `);
   };
 
   const handleAnalyzeArticles = () => {
     handleGenericAction("Article Check", () => `
-        Analyze the articles (a, an, the) in the sentence: "${inputText}".
+        You are an English grammar expert. Analyze the articles (a, an, the) in the following sentence.
+        Sentence: "${inputText}"
         Task:
         1. Check if articles are used correctly. If missing or wrong, suggest corrections.
-        2. Explain the article rules for each used or suggested article.
-        3. Tag the corrected sentence with POS.
-        4. Translate to Hindi.
-        Respond with JSON: { "rewrittenSentence": [...], "hindiTranslation": "...", "explanation": "..." }
+        2. Explain the article rules for each used or suggested article in simple language.
+        3. Break down the corrected sentence into an array of objects, each with "word" (string) and "pos" (Part-of-Speech tag string like "Noun", "Verb", "Adjective", "Adverb", "Pronoun", "Preposition", "Conjunction", "Determiner", "Auxiliary", "Punctuation", etc.).
+        4. Translate the corrected sentence into natural Hindi.
+        Respond with ONLY a valid JSON object (no extra text):
+        { "rewrittenSentence": [{"word":"The","pos":"Determiner"},{"word":"cat","pos":"Noun"},...], "hindiTranslation": "...", "explanation": "..." }
     `);
   };
 
@@ -409,7 +417,7 @@ export function SentenceAnalyzer({ apiKey, aiProvider, onWordDetailRequest }: Se
             <div className="space-y-2 p-3 border rounded-md flex flex-col justify-between">
               <h4 className="text-md font-semibold text-primary flex items-center"><Repeat className="mr-2 h-4 w-4" />Active/Passive Voice</h4>
               <div className="flex gap-2">
-                <Button variant="outline" onClick={() => handleGenericAction("Voice", () => `Transform the sentence "${inputText}" to the other grammatical voice (active to passive or passive to active). Tag each word with POS and provide a Hindi translation. Respond with JSON: { "transformedSentence": [...], "hindiTranslation": "...", "explanation": "..." }`)} disabled={isLoading || !inputText.trim()} className="flex-grow text-xs h-8">Voice Swap</Button>
+                <Button variant="outline" onClick={() => handleGenericAction("Voice", () => `You are an English grammar expert. Transform the following sentence to the other grammatical voice (active to passive or passive to active). Sentence: "${inputText}". Task: 1. Transform the voice. 2. Explain the rule. 3. Break down into array of objects with "word" (string) and "pos" (string like "Noun","Verb","Auxiliary", etc.). 4. Translate to Hindi. Respond with ONLY valid JSON: { "transformedSentence": [{"word":"The","pos":"Determiner"},...], "hindiTranslation": "...", "explanation": "..." }`)} disabled={isLoading || !inputText.trim()} className="flex-grow text-xs h-8">Voice Swap</Button>
                 <Button variant="ghost" size="sm" onClick={() => handleFeatureInfoClick("Active and Passive Voice")} className="h-8"><BookOpenCheck className="h-4 w-4" /></Button>
               </div>
             </div>
@@ -417,7 +425,7 @@ export function SentenceAnalyzer({ apiKey, aiProvider, onWordDetailRequest }: Se
             <div className="space-y-2 p-3 border rounded-md flex flex-col justify-between">
               <h4 className="text-md font-semibold text-primary flex items-center"><Quote className="mr-2 h-4 w-4" />Direct/Indirect Speech</h4>
               <div className="flex gap-2">
-                <Button variant="outline" onClick={() => handleGenericAction("Speech", () => `Transform the sentence "${inputText}" between direct and indirect (reported) speech. Tag each word with POS and provide a Hindi translation. Respond with JSON: { "transformedSentence": [...], "hindiTranslation": "...", "explanation": "..." }`)} disabled={isLoading || !inputText.trim()} className="flex-grow text-xs h-8">Speech Swap</Button>
+                <Button variant="outline" onClick={() => handleGenericAction("Speech", () => `You are an English grammar expert. Transform the following sentence between direct and indirect (reported) speech. Sentence: "${inputText}". Task: 1. Transform the speech type. 2. Explain the rule. 3. Break down into array of objects with "word" (string) and "pos" (string like "Noun","Verb","Auxiliary", etc.). 4. Translate to Hindi. Respond with ONLY valid JSON: { "transformedSentence": [{"word":"He","pos":"Pronoun"},...], "hindiTranslation": "...", "explanation": "..." }`)} disabled={isLoading || !inputText.trim()} className="flex-grow text-xs h-8">Speech Swap</Button>
                 <Button variant="ghost" size="sm" onClick={() => handleFeatureInfoClick("Direct and Indirect Speech")} className="h-8"><BookOpenCheck className="h-4 w-4" /></Button>
               </div>
             </div>
