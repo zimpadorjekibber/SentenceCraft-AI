@@ -4,7 +4,7 @@
 import React, { useState, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { MessageSquareText, BookOpen, Clock, Loader2 } from 'lucide-react';
+import { MessageSquareText, BookOpen, Clock, Loader2, MessageCircle } from 'lucide-react';
 import { InteractiveSentence } from './interactive-sentence';
 import type { WordPos } from '@/types/ai-types';
 import { generateAIContentAction } from '@/ai/flows/generate-content-action';
@@ -45,18 +45,23 @@ const TENSE_TIME_TIPS: Record<string, { label: string; tip: string; hindiTip: st
   },
 };
 
-type SentenceType = 'affirmative' | 'negative' | 'interrogative' | 'negative_interrogative';
+type SentenceType = 'affirmative' | 'negative' | 'interrogative' | 'negative_interrogative' | 'spoken';
 
 const SENTENCE_TYPE_LABELS: Record<SentenceType, { en: string; hi: string }> = {
   affirmative:            { en: "Affirmative",            hi: "सकारात्मक" },
   negative:               { en: "Negative",               hi: "नकारात्मक" },
   interrogative:          { en: "Interrogative",          hi: "प्रश्नवाचक" },
   negative_interrogative: { en: "Neg. Interrogative",     hi: "नकारात्मक प्रश्नवाचक" },
+  spoken:                 { en: "Spoken English",          hi: "बोलचाल की अंग्रेज़ी" },
 };
+
+// Grammar types (first row buttons)
+const GRAMMAR_TYPES: SentenceType[] = ['affirmative', 'negative', 'interrogative', 'negative_interrogative'];
 
 interface ConvertedSentence {
   sentence: WordPos[];
   hindiTranslation: string;
+  spokenNote?: string;
 }
 
 interface GeneratedSentenceDisplayProps {
@@ -94,6 +99,50 @@ export function GeneratedSentenceDisplay({
     setConvertedCache({});
   }
 
+  const buildPromptForType = useCallback((type: SentenceType): string => {
+    if (type === 'spoken') {
+      return `You are a fluent English speaker who helps students learn real-life conversational English.
+
+The student has learned this textbook sentence:
+"${sentenceText}"
+
+Convert it to how a native English speaker would ACTUALLY say it in everyday conversation.
+
+Rules:
+- Use natural contractions (I'm, don't, gonna, wanna, it's, he's, etc.)
+- Use informal/casual vocabulary if appropriate
+- Use common spoken phrases and fillers if they sound natural
+- Shorten or simplify long/formal structures
+- Keep the core meaning the same
+- The result should sound like something a real person would say in a casual conversation
+- Also provide a "spokenNote" explaining 2-3 key differences between the textbook version and the spoken version, in simple Hindi so Indian students understand. Keep it short (2-3 bullet points).
+
+Respond with ONLY a valid JSON object:
+{
+  "sentence": [ { "word": "...", "pos": "..." }, ... ],
+  "hindiTranslation": "Hindi translation of the spoken sentence",
+  "spokenNote": "• Textbook vs Spoken difference 1\\n• Difference 2\\n• Difference 3"
+}`;
+    }
+
+    const typeLabel = SENTENCE_TYPE_LABELS[type].en;
+    return `You are an expert English grammar teacher. Convert the following sentence to its ${typeLabel} form.
+Keep the SAME tense${tenseName ? ` ("${tenseName}")` : ''} — only change the sentence type.
+
+Original Sentence: "${sentenceText}"
+
+Rules:
+- For Negative: Add "not" / "do not" / "does not" / "did not" / "will not" etc. as appropriate for the tense.
+- For Interrogative: Rearrange to question form (Do/Does/Did/Is/Are/Was/Were/Has/Have/Had/Will/Shall + Subject + Verb...?).
+- For Negative Interrogative: Combine negative + question form (Doesn't/Don't/Didn't/Isn't/Aren't/Won't/Haven't... + Subject + Verb...?).
+
+Respond with ONLY a valid JSON object:
+{
+  "sentence": [ { "word": "...", "pos": "..." }, ... ],
+  "hindiTranslation": "Hindi translation of the converted sentence"
+}`;
+  }, [sentenceText, tenseName]);
+
   const handleSentenceTypeChange = useCallback(async (type: SentenceType) => {
     if (type === 'affirmative') {
       setActiveSentenceType('affirmative');
@@ -113,22 +162,7 @@ export function GeneratedSentenceDisplay({
 
     setIsConverting(true);
 
-    const typeLabel = SENTENCE_TYPE_LABELS[type].en;
-    const prompt = `You are an expert English grammar teacher. Convert the following sentence to its ${typeLabel} form.
-Keep the SAME tense${tenseName ? ` ("${tenseName}")` : ''} — only change the sentence type.
-
-Original Sentence: "${sentenceText}"
-
-Rules:
-- For Negative: Add "not" / "do not" / "does not" / "did not" / "will not" etc. as appropriate for the tense.
-- For Interrogative: Rearrange to question form (Do/Does/Did/Is/Are/Was/Were/Has/Have/Had/Will/Shall + Subject + Verb...?).
-- For Negative Interrogative: Combine negative + question form (Doesn't/Don't/Didn't/Isn't/Aren't/Won't/Haven't... + Subject + Verb...?).
-
-Respond with ONLY a valid JSON object:
-{
-  "sentence": [ { "word": "...", "pos": "..." }, ... ],
-  "hindiTranslation": "Hindi translation of the converted sentence"
-}`;
+    const prompt = buildPromptForType(type);
 
     try {
       const responseText = await generateAIContentAction(apiKey, aiProvider, prompt);
@@ -138,6 +172,7 @@ Respond with ONLY a valid JSON object:
         const converted: ConvertedSentence = {
           sentence: parsed.sentence,
           hindiTranslation: parsed.hindiTranslation || '',
+          spokenNote: parsed.spokenNote || '',
         };
         setConvertedCache(prev => ({ ...prev, [type]: converted }));
         setActiveSentenceType(type);
@@ -150,7 +185,7 @@ Respond with ONLY a valid JSON object:
     } finally {
       setIsConverting(false);
     }
-  }, [apiKey, aiProvider, sentenceText, tenseName, convertedCache, toast]);
+  }, [apiKey, aiProvider, buildPromptForType, convertedCache, toast]);
 
   if (isLoading && (!sentence || sentence.length === 0)) {
     return (
@@ -179,8 +214,10 @@ Respond with ONLY a valid JSON object:
 
   // Determine what to show based on active type
   const isAffirmative = activeSentenceType === 'affirmative';
+  const isSpoken = activeSentenceType === 'spoken';
   const displaySentence = isAffirmative ? sentence : (convertedCache[activeSentenceType]?.sentence || sentence);
   const displayHindi = isAffirmative ? hindiTranslation : (convertedCache[activeSentenceType]?.hindiTranslation || null);
+  const spokenNote = isSpoken ? convertedCache.spoken?.spokenNote : null;
   const activeLabel = SENTENCE_TYPE_LABELS[activeSentenceType];
 
   return (
@@ -209,7 +246,7 @@ Respond with ONLY a valid JSON object:
           <>
             {/* Sentence Type Toggle Buttons */}
             <div className="flex flex-wrap gap-1.5 sm:gap-2">
-              {(Object.keys(SENTENCE_TYPE_LABELS) as SentenceType[]).map((type) => {
+              {GRAMMAR_TYPES.map((type) => {
                 const label = SENTENCE_TYPE_LABELS[type];
                 const isActive = activeSentenceType === type;
                 return (
@@ -221,12 +258,29 @@ Respond with ONLY a valid JSON object:
                     onClick={() => handleSentenceTypeChange(type)}
                     disabled={isConverting}
                   >
-                    {isConverting && !isActive && type !== 'affirmative' && !convertedCache[type] ? null : null}
                     <span>{label.en}</span>
                     <span className="hidden sm:inline ml-1 opacity-70">({label.hi})</span>
                   </Button>
                 );
               })}
+
+              {/* Spoken English Button - special styled */}
+              <Button
+                size="sm"
+                variant={isSpoken ? "default" : "outline"}
+                className={`text-[10px] sm:text-xs px-2 sm:px-3 h-7 sm:h-8 ${
+                  isSpoken
+                    ? 'bg-green-600 hover:bg-green-700 text-white'
+                    : 'border-green-500 text-green-700 hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-950/30'
+                }`}
+                onClick={() => handleSentenceTypeChange('spoken')}
+                disabled={isConverting}
+              >
+                <MessageCircle className="h-3 w-3 sm:h-3.5 sm:w-3.5 mr-1" />
+                <span>Spoken English</span>
+                <span className="hidden sm:inline ml-1 opacity-70">(बोलचाल)</span>
+              </Button>
+
               {isConverting && (
                 <Loader2 className="h-4 w-4 animate-spin text-primary ml-1 self-center" />
               )}
@@ -234,9 +288,15 @@ Respond with ONLY a valid JSON object:
 
             {/* Active type label badge */}
             {!isAffirmative && (
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-primary/10 rounded-full">
-                <span className="text-xs sm:text-sm font-semibold text-primary">{activeLabel.en}</span>
-                <span className="text-xs text-primary/70" lang="hi">({activeLabel.hi})</span>
+              <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full ${
+                isSpoken ? 'bg-green-100 dark:bg-green-950/40' : 'bg-primary/10'
+              }`}>
+                <span className={`text-xs sm:text-sm font-semibold ${isSpoken ? 'text-green-700 dark:text-green-400' : 'text-primary'}`}>
+                  {activeLabel.en}
+                </span>
+                <span className={`text-xs ${isSpoken ? 'text-green-600/70 dark:text-green-400/70' : 'text-primary/70'}`} lang="hi">
+                  ({activeLabel.hi})
+                </span>
               </div>
             )}
 
@@ -250,6 +310,19 @@ Respond with ONLY a valid JSON object:
               <p className="text-sm sm:text-base text-muted-foreground italic px-1" lang="hi">
                 {displayHindi}
               </p>
+            )}
+
+            {/* Spoken English note - differences explained */}
+            {spokenNote && (
+              <div className="p-2.5 sm:p-3 bg-green-50 dark:bg-green-950/30 rounded-md border border-green-200 dark:border-green-800">
+                <p className="text-xs sm:text-sm font-semibold text-green-700 dark:text-green-400 flex items-center gap-1.5 mb-1.5">
+                  <MessageCircle className="h-3.5 w-3.5 shrink-0" />
+                  📖 Textbook vs 🗣️ Real Life — क्या बदला?
+                </p>
+                <div className="text-xs sm:text-sm text-green-800 dark:text-green-300 whitespace-pre-line" lang="hi">
+                  {spokenNote}
+                </div>
+              </div>
             )}
           </>
         )}
