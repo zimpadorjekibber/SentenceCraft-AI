@@ -126,16 +126,41 @@ export function HindiToEnglishTenseHelper({ apiKey, aiProvider, onWordDetailRequ
     if (isListening) {
       recognitionRef.current.stop();
     } else {
-      // Request mic permission first (required on mobile browsers)
+      // Check permission state first using Permissions API
+      let permissionBlocked = false;
+      try {
+        const permStatus = await navigator.permissions.query({ name: 'microphone' as PermissionName });
+        if (permStatus.state === 'denied') {
+          permissionBlocked = true;
+        }
+      } catch {
+        // Permissions API not supported, proceed with getUserMedia
+      }
+
+      if (permissionBlocked) {
+        toast({
+          title: "Microphone Block है",
+          description: "आपने पहले mic Block किया था। Fix करने के लिए: Chrome में address bar के बाईं ओर 🔒 lock icon पर tap करें → Permissions → Microphone → Allow करें → Page reload करें।",
+          variant: "destructive",
+          duration: 10000,
+        });
+        return;
+      }
+
+      // Request mic permission (required on mobile browsers)
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         // Stop the stream immediately - we just needed the permission
         stream.getTracks().forEach(track => track.stop());
-      } catch (err) {
+      } catch (err: any) {
+        const isBlocked = err?.name === 'NotAllowedError' || err?.name === 'PermissionDeniedError';
         toast({
           title: "Microphone Permission Denied",
-          description: "कृपया browser settings में जाकर microphone की permission allow करें।",
+          description: isBlocked
+            ? "Mic block है। Fix: Chrome address bar में 🔒 lock icon tap करें → Permissions → Microphone → Allow → फिर page reload करें।"
+            : "Microphone access नहीं मिला। कृपया browser settings check करें।",
           variant: "destructive",
+          duration: 10000,
         });
         return;
       }
