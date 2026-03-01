@@ -141,7 +141,9 @@ export function SentenceAnalyzer({ apiKey, aiProvider, onWordDetailRequest }: Se
       recognition!.onresult = (event: SpeechRecognitionEvent) => {
         let currentTranscript = "";
         for (let i = 0; i < event.results.length; i++) {
-            currentTranscript += event.results[i][0].transcript;
+            if (event.results[i]?.[0]) {
+              currentTranscript += event.results[i][0].transcript || '';
+            }
         }
         setInputText(currentTranscript);
       };

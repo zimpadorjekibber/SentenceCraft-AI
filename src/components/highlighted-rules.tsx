@@ -75,5 +75,5 @@ export function HighlightedRules({ rules }: HighlightedRulesProps) {
     return <>{rules}</>;
   }
 
-  return <>{parts.map((part, index) => React.cloneElement(part, { key: index }))}</>;
+  return <>{parts}</>;
 }

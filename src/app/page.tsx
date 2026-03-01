@@ -184,12 +184,12 @@ export default function HomePage() {
     }
   };
   
-  const handleViewDetailedRules = (tense: string) => {
+  const handleViewDetailedRules = useCallback((tense: string) => {
       setDetailedRulesTense(tense);
       setShowDetailedRulesDialog(true);
-  };
+  }, []);
 
-  const handleWordDetailRequest = async (wordData: WordPos, fullSentenceText?: string) => {
+  const handleWordDetailRequest = useCallback(async (wordData: WordPos, fullSentenceText?: string) => {
     // Show dialog immediately with loading state
     setWordDetailData(null);
     setShowWordDetailDialog(true);
@@ -250,7 +250,7 @@ Respond with ONLY a valid JSON object (no extra text):
     } finally {
       setWordDetailLoading(false);
     }
-  };
+  }, [apiKey, aiProvider, toast]);
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center py-6 sm:py-8 px-4 font-body">
