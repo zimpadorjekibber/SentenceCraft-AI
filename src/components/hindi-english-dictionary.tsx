@@ -82,9 +82,18 @@ interface HindiEnglishDictionaryProps {
   aiProvider: AiProvider;
 }
 
+// ─── Helpers ──────────────────────────────────────────────────
+/** Returns true if text contains mostly Devanagari (Hindi) characters */
+function isHindiText(text: string): boolean {
+  const devanagariChars = text.match(/[\u0900-\u097F]/g)?.length || 0;
+  const latinChars = text.match(/[a-zA-Z]/g)?.length || 0;
+  return devanagariChars > latinChars;
+}
+
 // ─── Component ────────────────────────────────────────────────
 export function HindiEnglishDictionary({ apiKey, aiProvider }: HindiEnglishDictionaryProps) {
-  const [hindiInput, setHindiInput] = useState('');
+  const [inputText, setInputText] = useState('');
+  const [searchDirection, setSearchDirection] = useState<'hi2en' | 'en2hi'>('hi2en');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<DictionaryResult | null>(null);
@@ -129,15 +138,15 @@ export function HindiEnglishDictionary({ apiKey, aiProvider }: HindiEnglishDicti
     apiKey,
     aiProvider,
     onTextExtracted: (text) => {
-      setHindiInput(text);
+      setInputText(text);
       resetResults();
       clearSuggestions();
-      toast({ title: "Text Extracted!", description: "Image se Hindi text nikaal kar input mein daal diya." });
+      toast({ title: "Text Extracted!", description: "Image se text nikaal kar input mein daal diya." });
     },
     onError: (message) => {
       toast({ title: "OCR Failed", description: message, variant: "destructive" });
     },
-    language: 'hindi',
+    language: 'hindi', // OCR extracts both Hindi and English from images
   });
 
   const checkApiKey = useCallback(() => {
@@ -183,7 +192,7 @@ export function HindiEnglishDictionary({ apiKey, aiProvider }: HindiEnglishDicti
             currentTranscript += event.results[i][0].transcript || '';
           }
         }
-        setHindiInput(currentTranscript);
+        setInputText(currentTranscript);
       };
       recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
         const errorMessages: Record<string, string> = {
@@ -244,7 +253,7 @@ export function HindiEnglishDictionary({ apiKey, aiProvider }: HindiEnglishDicti
         });
         return;
       }
-      setHindiInput('');
+      setInputText('');
       resetResults();
       clearSuggestions();
       recognitionRef.current.start();
@@ -253,8 +262,8 @@ export function HindiEnglishDictionary({ apiKey, aiProvider }: HindiEnglishDicti
 
   // ─── Transliteration Handlers ──────────────────────────────
   const handleSelectSuggestion = useCallback((suggestion: string) => {
-    const { newText, newCursorPos } = applySuggestion(hindiInput, suggestion);
-    setHindiInput(newText);
+    const { newText, newCursorPos } = applySuggestion(inputText, suggestion);
+    setInputText(newText);
     setSelectedSuggestionIndex(0);
     setTimeout(() => {
       if (textareaRef.current) {
@@ -262,13 +271,17 @@ export function HindiEnglishDictionary({ apiKey, aiProvider }: HindiEnglishDicti
         textareaRef.current.setSelectionRange(newCursorPos, newCursorPos);
       }
     }, 0);
-  }, [applySuggestion, hindiInput]);
+  }, [applySuggestion, inputText]);
 
   const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
-    setHindiInput(value);
+    setInputText(value);
     if (result) resetResults();
     setSelectedSuggestionIndex(0);
+
+    // Only fetch Hindi transliteration suggestions if there's Devanagari text already
+    // or the user is typing the first word (no Devanagari yet = could be either language)
+    // Transliteration suggestions appear for English chars; user picks Hindi if they want Hindi
     const cursorPos = e.target.selectionStart ?? value.length;
     fetchSuggestions(value, cursorPos);
   };
@@ -301,8 +314,8 @@ export function HindiEnglishDictionary({ apiKey, aiProvider }: HindiEnglishDicti
   const handleSearch = async () => {
     if (isListening) recognitionRef.current?.stop();
     clearSuggestions();
-    if (!hindiInput.trim()) {
-      setError("कृपया कोई हिंदी शब्द या phrase टाइप करें।");
+    if (!inputText.trim()) {
+      setError("कृपया कोई शब्द टाइप करें (Hindi या English)।");
       return;
     }
     if (!checkApiKey()) return;
@@ -310,9 +323,14 @@ export function HindiEnglishDictionary({ apiKey, aiProvider }: HindiEnglishDicti
     setIsLoading(true);
     resetResults();
 
-    const prompt = `You are a Hindi-English dictionary expert. The user typed a Hindi word or phrase.
+    // Detect language direction
+    const isHindi = isHindiText(inputText.trim());
+    setSearchDirection(isHindi ? 'hi2en' : 'en2hi');
 
-Hindi Input: "${hindiInput}"
+    const prompt = isHindi
+      ? `You are a Hindi-English dictionary expert. The user typed a Hindi word or phrase.
+
+Hindi Input: "${inputText}"
 
 Task: Provide the English meaning of this Hindi word/phrase.
 
@@ -333,7 +351,31 @@ Respond with ONLY a valid JSON object (no extra text):
   ]
 }
 
-If the input is not recognizable Hindi, respond with: { "error": "यह शब्द पहचाना नहीं जा सका। कृपया सही हिंदी शब्द लिखें।" }`;
+If the input is not recognizable Hindi, respond with: { "error": "यह शब्द पहचाना नहीं जा सका। कृपया सही शब्द लिखें।" }`
+      : `You are an English-Hindi dictionary expert. The user typed an English word or phrase.
+
+English Input: "${inputText}"
+
+Task: Provide the Hindi meaning of this English word/phrase.
+
+Respond with ONLY a valid JSON object (no extra text):
+{
+  "hindiWord": "Hindi meaning/translation (in Devanagari script)",
+  "englishMeaning": "the English word/phrase as given",
+  "pos": "Part of Speech in English (Noun, Verb, Adjective, Adverb, Preposition, Conjunction, Pronoun, Interjection, Phrase, Idiom)",
+  "posHindi": "Part of Speech in Hindi (संज्ञा, क्रिया, विशेषण, क्रियाविशेषण, etc.)",
+  "pronunciation": "English pronunciation guide with IPA (e.g., /kɒf/ for cough)",
+  "additionalMeanings": ["other Hindi meaning 1", "other Hindi meaning 2"],
+  "synonyms": ["English synonym1", "English synonym2", "English synonym3"],
+  "antonyms": ["English antonym1", "English antonym2"],
+  "examples": [
+    {"english": "Example sentence in English using the word", "hindi": "Same sentence in Hindi"},
+    {"english": "Another example", "hindi": "Hindi translation"},
+    {"english": "Third example", "hindi": "Hindi translation"}
+  ]
+}
+
+If the input is not recognizable English, respond with: { "error": "This word could not be recognized. Please enter a valid English word." }`;
 
     try {
       const responseText = await generateAIContentAction(apiKey!, aiProvider, prompt);
@@ -537,10 +579,10 @@ Respond with ONLY a valid JSON object:
       <CardHeader>
         <CardTitle className="text-lg sm:text-xl md:text-2xl font-headline text-primary flex items-center">
           <BookA className="mr-2 h-5 w-5 sm:h-6 sm:w-6" />
-          Hindi-English Dictionary
+          Dictionary / शब्दकोश
         </CardTitle>
         <CardDescription className="text-xs sm:text-sm text-muted-foreground pt-1">
-          Hindi शब्द type करें → English meaning पाएं। Type in English for Hindi suggestions (e.g., "khansi" → खाँसी)। Press <kbd className="px-1 py-0.5 bg-muted rounded text-xs font-mono">Space</kbd> to select.
+          <span className="font-semibold text-primary">Hindi → English</span> या <span className="font-semibold text-primary">English → Hindi</span> — दोनों काम करता है! Hindi के लिए English में type करें (e.g., &quot;khansi&quot; → खाँसी), <kbd className="px-1 py-0.5 bg-muted rounded text-xs font-mono">Space</kbd> दबाएं। English word सीधा लिखें।
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -558,8 +600,8 @@ Respond with ONLY a valid JSON object:
         <div className="relative">
           <Textarea
             ref={textareaRef}
-            placeholder="Hindi में type करें... (e.g., khansi → खाँसी)"
-            value={hindiInput}
+            placeholder="Hindi या English में type करें... (e.g., khansi → खाँसी, या beautiful)"
+            value={inputText}
             onChange={handleTextareaChange}
             onKeyDown={handleTextareaKeyDown}
             onFocus={(e) => {
@@ -571,7 +613,6 @@ Respond with ONLY a valid JSON object:
             rows={2}
             disabled={isListening || isLoading || isCameraProcessing}
             className="text-sm sm:text-base font-body"
-            lang="hi"
           />
           {/* Transliteration Suggestions Dropdown */}
           {suggestions.length > 0 && (
@@ -609,7 +650,7 @@ Respond with ONLY a valid JSON object:
         <div className="flex items-stretch gap-2">
           <Button
             onClick={handleSearch}
-            disabled={isLoading || isListening || isCameraProcessing || !hindiInput.trim()}
+            disabled={isLoading || isListening || isCameraProcessing || !inputText.trim()}
             className="flex-grow flex items-center justify-center text-sm"
           >
             {isLoading ? <LoadingSpinner inline /> : <><Search className="mr-2 h-5 w-5" /> Search</>}
@@ -618,7 +659,7 @@ Respond with ONLY a valid JSON object:
             variant="outline" size="icon" onClick={triggerCamera}
             disabled={isLoading || isListening || isCameraProcessing}
             className="shrink-0"
-            title="Take photo to extract Hindi text"
+            title="Take photo to extract text"
           >
             {isCameraProcessing ? <LoadingSpinner inline /> : <Camera className="h-5 w-5 text-primary" />}
           </Button>
@@ -647,8 +688,17 @@ Respond with ONLY a valid JSON object:
               {/* Main Meaning */}
               <div className="flex items-start justify-between gap-2">
                 <div className="space-y-1">
-                  <p className="text-muted-foreground text-xs">Hindi: <span className="font-semibold text-foreground text-sm">{result.hindiWord}</span></p>
-                  <p className="text-primary font-bold text-xl sm:text-2xl">{result.englishMeaning}</p>
+                  {searchDirection === 'hi2en' ? (
+                    <>
+                      <p className="text-muted-foreground text-xs">Hindi: <span className="font-semibold text-foreground text-sm">{result.hindiWord}</span></p>
+                      <p className="text-primary font-bold text-xl sm:text-2xl">{result.englishMeaning}</p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-muted-foreground text-xs">English: <span className="font-semibold text-foreground text-sm">{result.englishMeaning}</span></p>
+                      <p className="text-primary font-bold text-xl sm:text-2xl">{result.hindiWord}</p>
+                    </>
+                  )}
                   <div className="flex flex-wrap gap-1.5 items-center">
                     <Badge variant="secondary" className="text-xs">{result.pos}</Badge>
                     <Badge variant="outline" className="text-xs">{result.posHindi}</Badge>
@@ -665,7 +715,7 @@ Respond with ONLY a valid JSON object:
               {/* Additional Meanings */}
               {result.additionalMeanings?.length > 0 && (
                 <div>
-                  <h4 className="text-xs font-semibold text-muted-foreground mb-1">Other Meanings / अन्य अर्थ:</h4>
+                  <h4 className="text-xs font-semibold text-muted-foreground mb-1">{searchDirection === 'hi2en' ? 'Other English Meanings' : 'Other Hindi Meanings'} / अन्य अर्थ:</h4>
                   <div className="flex flex-wrap gap-1.5">
                     {result.additionalMeanings.map((m, i) => (
                       <Badge key={i} variant="outline" className="text-xs">{m}</Badge>
