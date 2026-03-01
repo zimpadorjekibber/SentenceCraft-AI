@@ -53,29 +53,39 @@ function InteractiveWord({
   taggedWord,
   fullSentenceText,
   onWordDetailRequest,
+  isOpen,
+  onOpen,
+  onClose,
 }: {
   taggedWord: WordPos;
   fullSentenceText: string;
   onWordDetailRequest?: (wordData: WordPos, fullSentenceText: string) => void;
+  isOpen: boolean;
+  onOpen: () => void;
+  onClose: () => void;
 }) {
-  const [open, setOpen] = useState(false);
   const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isTouch = useRef(false);
 
-  const handleMouseEnter = useCallback(() => {
-    if (isTouch.current) return; // Skip hover on touch devices
-    hoverTimeoutRef.current = setTimeout(() => setOpen(true), 150);
-  }, []);
-
-  const handleMouseLeave = useCallback(() => {
+  const clearHoverTimeout = useCallback(() => {
     if (hoverTimeoutRef.current) {
       clearTimeout(hoverTimeoutRef.current);
       hoverTimeoutRef.current = null;
     }
-    if (!isTouch.current) {
-      setOpen(false);
-    }
   }, []);
+
+  const handleMouseEnter = useCallback(() => {
+    if (isTouch.current) return;
+    clearHoverTimeout();
+    hoverTimeoutRef.current = setTimeout(() => onOpen(), 120);
+  }, [onOpen, clearHoverTimeout]);
+
+  const handleMouseLeave = useCallback(() => {
+    clearHoverTimeout();
+    if (!isTouch.current) {
+      onClose();
+    }
+  }, [onClose, clearHoverTimeout]);
 
   const handleTouchStart = useCallback(() => {
     isTouch.current = true;
@@ -83,12 +93,16 @@ function InteractiveWord({
 
   const handleClick = useCallback(() => {
     if (isTouch.current) {
-      setOpen(prev => !prev); // Toggle on tap for mobile
+      if (isOpen) {
+        onClose();
+      } else {
+        onOpen();
+      }
     }
-  }, []);
+  }, [isOpen, onOpen, onClose]);
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={isOpen} onOpenChange={(newOpen) => { if (!newOpen) onClose(); }}>
       <PopoverTrigger asChild>
         <span
           className={`cursor-pointer hover:bg-foreground/10 active:scale-95 transition-all px-0.5 py-1 rounded-sm ${WordPartOfSpeechColors[taggedWord.pos] || WordPartOfSpeechColors.Unknown}`}
@@ -98,8 +112,6 @@ function InteractiveWord({
           onMouseLeave={handleMouseLeave}
           onTouchStart={handleTouchStart}
           onClick={handleClick}
-          onFocus={() => !isTouch.current && setOpen(true)}
-          onBlur={() => !isTouch.current && setOpen(false)}
         >
           {taggedWord.word}
         </span>
@@ -107,8 +119,8 @@ function InteractiveWord({
       <PopoverContent
         className="w-auto max-w-[220px] p-3 z-50"
         sideOffset={6}
-        onMouseEnter={() => { if (!isTouch.current) setOpen(true); }}
-        onMouseLeave={() => { if (!isTouch.current) setOpen(false); }}
+        onMouseEnter={() => { if (!isTouch.current) onOpen(); }}
+        onMouseLeave={() => { if (!isTouch.current) onClose(); }}
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <div className="flex flex-col space-y-2 items-start">
@@ -123,7 +135,7 @@ function InteractiveWord({
               onClick={(e) => {
                 e.stopPropagation();
                 onWordDetailRequest(taggedWord, fullSentenceText);
-                setOpen(false);
+                onClose();
               }}
             >
               Vocabulary Details
@@ -136,6 +148,9 @@ function InteractiveWord({
 }
 
 export function InteractiveSentence({ taggedSentence, onWordDetailRequest, sentenceIdentifier = "s" }: InteractiveSentenceProps) {
+  // Single state to track which word index is active - only ONE popup at a time
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
+
   if (!taggedSentence || !Array.isArray(taggedSentence) || taggedSentence.length === 0) return null;
 
   const fullSentenceText = taggedSentence.map(tw => tw.word).join(" ");
@@ -151,6 +166,9 @@ export function InteractiveSentence({ taggedSentence, onWordDetailRequest, sente
               taggedWord={taggedWord}
               fullSentenceText={fullSentenceText}
               onWordDetailRequest={onWordDetailRequest}
+              isOpen={activeIndex === index}
+              onOpen={() => setActiveIndex(index)}
+              onClose={() => setActiveIndex((prev) => prev === index ? null : prev)}
             />
           )}
           {(index < taggedSentence.length - 1 && !/^[.,!?;:]$/.test(taggedSentence[index + 1]?.word)) && '\u00A0'}
