@@ -53,6 +53,7 @@ export default function HomePage() {
   });
   const [selectedTense, setSelectedTense] = useState<string | null>("Present Indefinite");
   const [generatedSentence, setGeneratedSentence] = useState<WordPos[] | null>(null);
+  const [sentenceHindiTranslation, setSentenceHindiTranslation] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -160,6 +161,7 @@ export default function HomePage() {
     setIsLoading(true);
     setError(null);
     setGeneratedSentence(null);
+    setSentenceHindiTranslation(null);
 
     try {
       const result = await generateSentenceAction({
@@ -171,6 +173,7 @@ export default function HomePage() {
       
       if (result?.sentence?.length) {
         setGeneratedSentence(result.sentence);
+        setSentenceHindiTranslation(result.hindiTranslation || null);
         toast({ title: "Sentence Crafted!", description: "AI has successfully generated your sentence." });
       } else {
         throw new Error("AI returned an empty sentence. Please try again.");
@@ -359,6 +362,8 @@ Respond with ONLY a valid JSON object (no extra text):
 
                     <GeneratedSentenceDisplay
                         sentence={generatedSentence}
+                        hindiTranslation={sentenceHindiTranslation}
+                        tenseName={selectedTense}
                         isLoading={isLoading}
                         onViewDetailedRules={() => selectedTense && handleViewDetailedRules(selectedTense)}
                         onWordDetailRequest={handleWordDetailRequest}
@@ -369,7 +374,10 @@ Respond with ONLY a valid JSON object (no extra text):
                           apiKey={apiKey}
                           aiProvider={aiProvider}
                           originalSentenceTagged={generatedSentence}
-                          onSuggestionSelect={(suggestion) => setGeneratedSentence(suggestion)}
+                          onSuggestionSelect={(suggestion, hindiTranslation) => {
+                            setGeneratedSentence(suggestion);
+                            setSentenceHindiTranslation(hindiTranslation || null);
+                          }}
                           onWordDetailRequest={handleWordDetailRequest}
                       />
                     </Suspense>

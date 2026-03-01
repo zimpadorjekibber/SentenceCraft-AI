@@ -16,12 +16,13 @@ interface SentenceModificationProps {
   apiKey: string | null;
   aiProvider: AiProvider;
   originalSentenceTagged: WordPos[] | null;
-  onSuggestionSelect: (suggestionTagged: WordPos[]) => void;
+  onSuggestionSelect: (suggestionTagged: WordPos[], hindiTranslation?: string) => void;
   onWordDetailRequest?: (wordData: WordPos, fullSentenceText: string) => void;
 }
 
 export function SentenceModification({ apiKey, aiProvider, originalSentenceTagged, onSuggestionSelect, onWordDetailRequest }: SentenceModificationProps) {
     const [suggestions, setSuggestions] = useState<WordPos[][] | null>(null);
+    const [hindiTranslations, setHindiTranslations] = useState<string[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const { toast } = useToast();
 
@@ -37,6 +38,7 @@ export function SentenceModification({ apiKey, aiProvider, originalSentenceTagge
 
         setIsLoading(true);
         setSuggestions(null);
+        setHindiTranslations([]);
 
         const originalSentenceText = originalSentenceTagged.map(w => w.word).join(' ');
 
@@ -49,7 +51,8 @@ export function SentenceModification({ apiKey, aiProvider, originalSentenceTagge
             Task:
             1. Generate exactly three alternative versions of the original sentence.
             2. For each new sentence, break it down into an array of objects, where each object has a "word" and a "pos" (Part-of-Speech) tag.
-            3. Ensure the output is a JSON object with a single key "suggestions", which is an array containing the three tagged sentences.
+            3. Also provide a natural Hindi translation for each alternative sentence.
+            4. Ensure the output is a JSON object with "suggestions" (array of tagged sentences) and "hindiTranslations" (array of Hindi translations, one per suggestion).
 
             Example Output Structure:
             {
@@ -57,6 +60,11 @@ export function SentenceModification({ apiKey, aiProvider, originalSentenceTagge
                     [ { "word": "The", "pos": "Determiner" }, { "word": "cat", "pos": "Noun" }, { "word": "pursued", "pos": "Verb" }, { "word": "the", "pos": "Determiner" }, { "word": "mouse", "pos": "Noun" }, { "word": ".", "pos": "Punctuation" } ],
                     [ { "word": "The", "pos": "Determiner" }, { "word": "mouse", "pos": "Noun" }, { "word": "was", "pos": "Verb" }, { "word": "chased", "pos": "Verb" }, { "word": "by", "pos": "Preposition" }, { "word": "the", "pos": "Determiner" }, { "word": "cat", "pos": "Noun" }, { "word": ".", "pos": "Punctuation" } ],
                     [ { "word": "The", "pos": "Determiner" }, { "word": "feline", "pos": "Noun" }, { "word": "ran", "pos": "Verb" }, { "word": "after", "pos": "Preposition" }, { "word": "the", "pos": "Determiner" }, { "word": "rodent", "pos": "Noun" }, { "word": ".", "pos": "Punctuation" } ]
+                ],
+                "hindiTranslations": [
+                    "बिल्ली ने चूहे का पीछा किया।",
+                    "चूहे का बिल्ली द्वारा पीछा किया गया।",
+                    "बिल्ली चूहे के पीछे भागी।"
                 ]
             }
         `;
@@ -67,6 +75,7 @@ export function SentenceModification({ apiKey, aiProvider, originalSentenceTagge
 
             if (parsedResult.suggestions && Array.isArray(parsedResult.suggestions)) {
                 setSuggestions(parsedResult.suggestions);
+                setHindiTranslations(parsedResult.hindiTranslations || []);
             } else {
                 throw new Error("AI response did not contain a 'suggestions' array.");
             }
@@ -95,15 +104,20 @@ export function SentenceModification({ apiKey, aiProvider, originalSentenceTagge
                 {suggestions && suggestions.length > 0 && (
                     <div className="space-y-3">
                         {suggestions.map((suggestion, index) => (
-                            <div key={index} className="flex flex-col sm:flex-row sm:items-center gap-2 p-3 border rounded-md bg-muted/20">
+                            <div key={index} className="flex flex-col sm:flex-row sm:items-start gap-2 p-3 border rounded-md bg-muted/20">
                                 <div className="flex-grow">
                                     <InteractiveSentence
                                         taggedSentence={suggestion}
                                         onWordDetailRequest={onWordDetailRequest}
                                         sentenceIdentifier={`sugg-${index}`}
                                     />
+                                    {hindiTranslations[index] && (
+                                        <p className="mt-1.5 text-xs sm:text-sm text-muted-foreground italic px-1" lang="hi">
+                                            {hindiTranslations[index]}
+                                        </p>
+                                    )}
                                 </div>
-                                <Button size="default" variant="outline" onClick={() => onSuggestionSelect(suggestion)} className="w-full sm:w-auto shrink-0">
+                                <Button size="default" variant="outline" onClick={() => onSuggestionSelect(suggestion, hindiTranslations[index])} className="w-full sm:w-auto shrink-0 mt-1 sm:mt-0">
                                     <ThumbsUp className="mr-2 h-4 w-4" />
                                     Use this
                                 </Button>

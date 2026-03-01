@@ -17,6 +17,7 @@ const WordPosSchema = z.object({
 
 const SentenceOutputSchema = z.object({
   sentence: z.array(WordPosSchema),
+  hindiTranslation: z.string().describe('Natural Hindi translation of the complete sentence'),
 });
 
 const SentenceInputSchema = z.object({
@@ -54,6 +55,16 @@ const TENSE_FORMULAS: Record<string, string> = {
   "Future Perfect Continuous": "Subject + will have + been + V-ing (e.g., I will have been playing). Must use 'will have been + V-ing'.",
 };
 
+// Time-related instructions for tenses that REQUIRE time references
+const TENSE_TIME_INSTRUCTIONS: Record<string, string> = {
+  "Present Perfect Continuous": "IMPORTANT: You MUST include a time reference using 'since' (point in time) or 'for' (duration). Example: 'since morning', 'for two hours'. Without a time reference, this tense is incomplete.",
+  "Past Perfect Continuous":    "IMPORTANT: You MUST include a time reference using 'since' or 'for' to show duration. Example: 'since childhood', 'for three years'. Without a time reference, this tense is incomplete.",
+  "Future Perfect Continuous":  "IMPORTANT: You MUST include a time reference showing duration, typically using 'for...by'. Example: 'for two hours by evening'. Without a time reference, this tense is incomplete.",
+  "Present Perfect":            "TIP: Consider adding a time reference with 'since', 'for', 'already', 'just', 'yet', 'ever', 'never' to make the sentence more natural and educational.",
+  "Past Perfect":               "TIP: Consider adding a time context like 'before', 'by the time', 'already' to show sequence of past events.",
+  "Future Perfect":             "TIP: Consider adding a time reference using 'by' (e.g., 'by tomorrow', 'by next week') to show the deadline.",
+};
+
 function buildPrompt(input: SentenceInput): string {
   const optionalParts = [
     input.adjective    ? `- Adjective: ${input.adjective}`       : '',
@@ -66,6 +77,7 @@ function buildPrompt(input: SentenceInput): string {
   ].filter(Boolean).join('\n');
 
   const tenseFormula = TENSE_FORMULAS[input.tense] || '';
+  const timeInstruction = TENSE_TIME_INSTRUCTIONS[input.tense] || '';
 
   return `You are an expert English grammar teacher. You must be VERY STRICT about tense accuracy.
 Generate a natural, grammatically correct English sentence in the "${input.tense}" tense.
@@ -73,7 +85,7 @@ Generate a natural, grammatically correct English sentence in the "${input.tense
 CRITICAL TENSE RULE — You MUST follow this formula exactly:
 ${tenseFormula || `Use the correct verb form for "${input.tense}" tense.`}
 
-WARNING: Do NOT confuse similar tenses. For example:
+${timeInstruction ? `TIME REFERENCE RULE:\n${timeInstruction}\n` : ''}WARNING: Do NOT confuse similar tenses. For example:
 - "Present Perfect" uses "have/has + V3" (e.g., "I have studied") — NOT "have been + V-ing"
 - "Present Perfect Continuous" uses "have/has + been + V-ing" (e.g., "I have been studying")
 - "Past Indefinite" uses "V2" (e.g., "I studied") — NOT "was/were + V-ing"
@@ -91,7 +103,8 @@ Instructions:
 2. Double-check: does the verb form match "${input.tense}" exactly? If not, fix it.
 3. Break the sentence into an array of objects where each object has "word" and "pos" (e.g., "Noun", "Verb", "Punctuation").
 4. If a determiner is needed for correct grammar, add it automatically.
-5. Respond with ONLY a JSON object: { "sentence": [ { "word": "...", "pos": "..." }, ... ] }`;
+5. Also provide a natural Hindi translation of the complete sentence.
+6. Respond with ONLY a JSON object: { "sentence": [ { "word": "...", "pos": "..." }, ... ], "hindiTranslation": "पूरे वाक्य का हिंदी अनुवाद" }`;
 }
 
 export async function generateSentenceAction(input: SentenceInput): Promise<SentenceOutput> {
