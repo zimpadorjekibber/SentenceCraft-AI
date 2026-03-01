@@ -28,7 +28,8 @@ import {
   Quote,
   Sparkles,
   TextCursorInput,
-  Camera
+  Camera,
+  MessageCircle
 } from 'lucide-react';
 
 import type { WordPos } from '@/types/ai-types';
@@ -504,11 +505,42 @@ export function SentenceAnalyzer({ apiKey, aiProvider, onWordDetailRequest }: Se
               </div>
             </div>
             
-            <div className="space-y-2 p-3 border rounded-lg flex flex-col justify-between col-span-2 sm:col-span-1">
+            <div className="space-y-2 p-3 border rounded-lg flex flex-col justify-between">
               <h4 className="text-sm font-semibold text-primary flex items-center"><Quote className="mr-1.5 h-4 w-4 shrink-0" />Speech</h4>
               <div className="flex gap-1.5">
                 <Button variant="outline" onClick={() => handleGenericAction("Speech", () => `You are an English grammar expert. Transform the following sentence between direct and indirect (reported) speech. Sentence: "${inputText}". Task: 1. Transform the speech type. 2. Explain the rule. 3. Break down into array of objects with "word" (string) and "pos" (string like "Noun","Verb","Auxiliary", etc.). 4. Translate to Hindi. Respond with ONLY valid JSON: { "transformedSentence": [{"word":"He","pos":"Pronoun"},...], "hindiTranslation": "...", "explanation": "..." }`)} disabled={isLoading || !inputText.trim()} className="flex-grow text-xs">Swap</Button>
                 <Button variant="ghost" size="icon" onClick={() => handleFeatureInfoClick("Direct and Indirect Speech")} className="shrink-0"><BookOpenCheck className="h-4 w-4" /></Button>
+              </div>
+            </div>
+
+            {/* Spoken English */}
+            <div className="space-y-2 p-3 border rounded-lg flex flex-col justify-between border-green-300 dark:border-green-700 bg-green-50/50 dark:bg-green-950/20 col-span-2">
+              <h4 className="text-sm font-semibold text-green-700 dark:text-green-400 flex items-center"><MessageCircle className="mr-1.5 h-4 w-4 shrink-0" />🗣️ Spoken English (बोलचाल)</h4>
+              <div className="flex gap-1.5">
+                <Button variant="outline" onClick={() => handleGenericAction("Spoken English", () => `You are a fluent English speaker who helps students learn real-life conversational English.
+
+The student has this textbook/formal sentence:
+"${inputText}"
+
+Convert it to how a native English speaker would ACTUALLY say it in everyday conversation.
+
+Rules:
+- Use natural contractions (I'm, don't, gonna, wanna, it's, he's, etc.)
+- Use informal/casual vocabulary if appropriate
+- Use common spoken phrases and fillers if they sound natural
+- Shorten or simplify long/formal structures
+- Keep the core meaning the same
+
+Task:
+1. Convert to spoken/conversational English.
+2. Explain 2-3 key differences between textbook and spoken version in simple Hindi so Indian students understand (use bullet points).
+3. Break down the spoken sentence into an array of objects with "word" (string) and "pos" (Part-of-Speech tag like "Noun", "Verb", "Adjective", "Adverb", "Pronoun", "Preposition", "Conjunction", "Determiner", "Auxiliary", "Punctuation", etc.).
+4. Translate the spoken sentence into natural Hindi.
+
+Respond with ONLY a valid JSON object:
+{ "rewrittenSentence": [{"word":"I'm","pos":"Pronoun"},{"word":"gonna","pos":"Verb"},...], "hindiTranslation": "...", "explanation": "📖 Textbook vs 🗣️ Real Life — क्या बदला?\\n• Point 1\\n• Point 2\\n• Point 3" }`)} disabled={isLoading || !inputText.trim()} className="flex-grow text-xs border-green-400 text-green-700 hover:bg-green-100 dark:text-green-400 dark:hover:bg-green-950/40">
+                  {isLoading && currentAction === 'Spoken English' ? <LoadingSpinner inline /> : "Convert"}
+                </Button>
               </div>
             </div>
         </div>
