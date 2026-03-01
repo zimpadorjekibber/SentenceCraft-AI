@@ -27,7 +27,6 @@ import {
   HelpCircle,
   Quote,
   Sparkles,
-  Shapes,
   TextCursorInput,
   Camera
 } from 'lucide-react';
@@ -341,20 +340,6 @@ export function SentenceAnalyzer({ apiKey, aiProvider, onWordDetailRequest }: Se
     `);
   };
 
-  const handleAnalyzeArticles = () => {
-    handleGenericAction("Article Check", () => `
-        You are an English grammar expert. Analyze the articles (a, an, the) in the following sentence.
-        Sentence: "${inputText}"
-        Task:
-        1. Check if articles are used correctly. If missing or wrong, suggest corrections.
-        2. Explain the article rules for each used or suggested article in simple language.
-        3. Break down the corrected sentence into an array of objects, each with "word" (string) and "pos" (Part-of-Speech tag string like "Noun", "Verb", "Adjective", "Adverb", "Pronoun", "Preposition", "Conjunction", "Determiner", "Auxiliary", "Punctuation", etc.).
-        4. Translate the corrected sentence into natural Hindi.
-        Respond with ONLY a valid JSON object (no extra text):
-        { "rewrittenSentence": [{"word":"The","pos":"Determiner"},{"word":"cat","pos":"Noun"},...], "hindiTranslation": "...", "explanation": "..." }
-    `);
-  };
-
   const handleFeatureInfoClick = (featureKey: GrammarRuleKey) => {
     const rule = GRAMMAR_FEATURE_RULES[featureKey];
     setActiveFeatureRuleTitle(featureKey);
@@ -497,17 +482,6 @@ export function SentenceAnalyzer({ apiKey, aiProvider, onWordDetailRequest }: Se
                   </Button>
                   <Button variant="ghost" size="icon" onClick={() => handleFeatureInfoClick("Conditionals")} className="shrink-0"><BookOpenCheck className="h-4 w-4" /></Button>
                 </div>
-              </div>
-            </div>
-
-            {/* Articles */}
-            <div className="space-y-2 p-3 border rounded-lg">
-              <h4 className="text-sm font-semibold text-primary flex items-center"><Shapes className="mr-1.5 h-4 w-4 shrink-0" />Articles</h4>
-              <div className="flex flex-col gap-2">
-                <Button variant="outline" onClick={handleAnalyzeArticles} disabled={isLoading || !inputText.trim()} className="text-xs w-full">
-                  {isLoading && currentAction === 'Article Check' ? <LoadingSpinner inline /> : "Check Articles"}
-                </Button>
-                <Button variant="ghost" size="sm" onClick={() => handleFeatureInfoClick("Articles")} className="text-xs w-full"><BookOpenCheck className="mr-1.5 h-3.5 w-3.5" /> Rules</Button>
               </div>
             </div>
 
