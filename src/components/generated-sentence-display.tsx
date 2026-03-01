@@ -45,24 +45,25 @@ const TENSE_TIME_TIPS: Record<string, { label: string; tip: string; hindiTip: st
   },
 };
 
-type SentenceType = 'affirmative' | 'negative' | 'interrogative' | 'negative_interrogative' | 'spoken';
+type GrammarType = 'affirmative' | 'negative' | 'interrogative' | 'negative_interrogative';
 
-const SENTENCE_TYPE_LABELS: Record<SentenceType, { en: string; hi: string }> = {
-  affirmative:            { en: "Affirmative",            hi: "सकारात्मक" },
-  negative:               { en: "Negative",               hi: "नकारात्मक" },
-  interrogative:          { en: "Interrogative",          hi: "प्रश्नवाचक" },
-  negative_interrogative: { en: "Neg. Interrogative",     hi: "नकारात्मक प्रश्नवाचक" },
-  spoken:                 { en: "Spoken English",          hi: "बोलचाल की अंग्रेज़ी" },
+const GRAMMAR_TYPE_LABELS: Record<GrammarType, { en: string; hi: string }> = {
+  affirmative:            { en: "Affirmative",        hi: "सकारात्मक" },
+  negative:               { en: "Negative",           hi: "नकारात्मक" },
+  interrogative:          { en: "Interrogative",      hi: "प्रश्नवाचक" },
+  negative_interrogative: { en: "Neg. Interrogative",  hi: "नकारात्मक प्रश्नवाचक" },
 };
 
-// Grammar types (first row buttons)
-const GRAMMAR_TYPES: SentenceType[] = ['affirmative', 'negative', 'interrogative', 'negative_interrogative'];
+const ALL_GRAMMAR_TYPES: GrammarType[] = ['affirmative', 'negative', 'interrogative', 'negative_interrogative'];
 
 interface ConvertedSentence {
   sentence: WordPos[];
   hindiTranslation: string;
   spokenNote?: string;
 }
+
+// Cache key: "negative" for grammar, "spoken_negative" for spoken version
+type CacheKey = string;
 
 interface GeneratedSentenceDisplayProps {
   sentence: WordPos[] | null;
@@ -85,8 +86,9 @@ export function GeneratedSentenceDisplay({
   onWordDetailRequest,
   onViewDetailedRules,
 }: GeneratedSentenceDisplayProps) {
-  const [activeSentenceType, setActiveSentenceType] = useState<SentenceType>('affirmative');
-  const [convertedCache, setConvertedCache] = useState<Partial<Record<SentenceType, ConvertedSentence>>>({});
+  const [activeGrammarType, setActiveGrammarType] = useState<GrammarType>('affirmative');
+  const [isSpokenMode, setIsSpokenMode] = useState(false);
+  const [convertedCache, setConvertedCache] = useState<Record<CacheKey, ConvertedSentence>>({});
   const [isConverting, setIsConverting] = useState(false);
   const { toast } = useToast();
 
@@ -95,37 +97,52 @@ export function GeneratedSentenceDisplay({
   const [lastSentenceText, setLastSentenceText] = useState('');
   if (sentenceText && sentenceText !== lastSentenceText) {
     setLastSentenceText(sentenceText);
-    setActiveSentenceType('affirmative');
+    setActiveGrammarType('affirmative');
+    setIsSpokenMode(false);
     setConvertedCache({});
   }
 
-  const buildPromptForType = useCallback((type: SentenceType): string => {
-    if (type === 'spoken') {
-      return `You are a fluent English speaker who helps students learn real-life conversational English.
+  // Get the text of a grammar type sentence (for spoken conversion)
+  const getGrammarSentenceText = useCallback((grammarType: GrammarType): string => {
+    if (grammarType === 'affirmative') return sentenceText;
+    return convertedCache[grammarType]?.sentence.map(w => w.word).join(' ') || sentenceText;
+  }, [sentenceText, convertedCache]);
 
-The student has learned this textbook sentence:
-"${sentenceText}"
+  const convertSentence = useCallback(async (cacheKey: CacheKey, prompt: string): Promise<boolean> => {
+    if (convertedCache[cacheKey]) return true; // Already cached
 
-Convert it to how a native English speaker would ACTUALLY say it in everyday conversation.
-
-Rules:
-- Use natural contractions (I'm, don't, gonna, wanna, it's, he's, etc.)
-- Use informal/casual vocabulary if appropriate
-- Use common spoken phrases and fillers if they sound natural
-- Shorten or simplify long/formal structures
-- Keep the core meaning the same
-- The result should sound like something a real person would say in a casual conversation
-- Also provide a "spokenNote" explaining 2-3 key differences between the textbook version and the spoken version, in simple Hindi so Indian students understand. Keep it short (2-3 bullet points).
-
-Respond with ONLY a valid JSON object:
-{
-  "sentence": [ { "word": "...", "pos": "..." }, ... ],
-  "hindiTranslation": "Hindi translation of the spoken sentence",
-  "spokenNote": "• Textbook vs Spoken difference 1\\n• Difference 2\\n• Difference 3"
-}`;
+    if (!apiKey) {
+      toast({ title: "API Key Missing", description: "Please set your API key.", variant: "destructive" });
+      return false;
     }
 
-    const typeLabel = SENTENCE_TYPE_LABELS[type].en;
+    setIsConverting(true);
+    try {
+      const responseText = await generateAIContentAction(apiKey, aiProvider, prompt);
+      const parsed = JSON.parse(responseText);
+
+      if (parsed.sentence && Array.isArray(parsed.sentence)) {
+        const converted: ConvertedSentence = {
+          sentence: parsed.sentence,
+          hindiTranslation: parsed.hindiTranslation || '',
+          spokenNote: parsed.spokenNote || '',
+        };
+        setConvertedCache(prev => ({ ...prev, [cacheKey]: converted }));
+        return true;
+      } else {
+        throw new Error("AI response format invalid.");
+      }
+    } catch (e: any) {
+      console.error("Sentence conversion error:", e);
+      toast({ title: "Conversion Error", description: e.message || "Could not convert sentence.", variant: "destructive" });
+      return false;
+    } finally {
+      setIsConverting(false);
+    }
+  }, [apiKey, aiProvider, convertedCache, toast]);
+
+  const buildGrammarPrompt = useCallback((type: GrammarType): string => {
+    const typeLabel = GRAMMAR_TYPE_LABELS[type].en;
     return `You are an expert English grammar teacher. Convert the following sentence to its ${typeLabel} form.
 Keep the SAME tense${tenseName ? ` ("${tenseName}")` : ''} — only change the sentence type.
 
@@ -143,49 +160,94 @@ Respond with ONLY a valid JSON object:
 }`;
   }, [sentenceText, tenseName]);
 
-  const handleSentenceTypeChange = useCallback(async (type: SentenceType) => {
+  const buildSpokenPrompt = useCallback((grammarType: GrammarType): string => {
+    const sourceText = getGrammarSentenceText(grammarType);
+    const grammarLabel = GRAMMAR_TYPE_LABELS[grammarType].en;
+    return `You are a fluent English speaker who helps students learn real-life conversational English.
+
+The student has learned this textbook ${grammarLabel} sentence:
+"${sourceText}"
+
+Convert it to how a native English speaker would ACTUALLY say it in everyday conversation.
+
+Rules:
+- Use natural contractions (I'm, don't, gonna, wanna, it's, he's, etc.)
+- Use informal/casual vocabulary if appropriate
+- Use common spoken phrases and fillers if they sound natural
+- Shorten or simplify long/formal structures
+- Keep the core meaning AND sentence type (${grammarLabel}) the same
+- The result should sound like something a real person would say in a casual conversation
+- Also provide a "spokenNote" explaining 2-3 key differences between the textbook version and the spoken version, in simple Hindi so Indian students understand. Keep it short (2-3 bullet points).
+
+Respond with ONLY a valid JSON object:
+{
+  "sentence": [ { "word": "...", "pos": "..." }, ... ],
+  "hindiTranslation": "Hindi translation of the spoken sentence",
+  "spokenNote": "• Textbook vs Spoken difference 1\\n• Difference 2\\n• Difference 3"
+}`;
+  }, [getGrammarSentenceText]);
+
+  // Handle grammar type button click
+  const handleGrammarTypeChange = useCallback(async (type: GrammarType) => {
     if (type === 'affirmative') {
-      setActiveSentenceType('affirmative');
-      return;
-    }
-
-    // Check cache first
-    if (convertedCache[type]) {
-      setActiveSentenceType(type);
-      return;
-    }
-
-    if (!apiKey) {
-      toast({ title: "API Key Missing", description: "Please set your API key.", variant: "destructive" });
-      return;
-    }
-
-    setIsConverting(true);
-
-    const prompt = buildPromptForType(type);
-
-    try {
-      const responseText = await generateAIContentAction(apiKey, aiProvider, prompt);
-      const parsed = JSON.parse(responseText);
-
-      if (parsed.sentence && Array.isArray(parsed.sentence)) {
-        const converted: ConvertedSentence = {
-          sentence: parsed.sentence,
-          hindiTranslation: parsed.hindiTranslation || '',
-          spokenNote: parsed.spokenNote || '',
-        };
-        setConvertedCache(prev => ({ ...prev, [type]: converted }));
-        setActiveSentenceType(type);
-      } else {
-        throw new Error("AI response format invalid.");
+      setActiveGrammarType('affirmative');
+      // If spoken mode is on, check if spoken_affirmative is cached
+      if (isSpokenMode) {
+        const spokenKey = 'spoken_affirmative';
+        if (!convertedCache[spokenKey]) {
+          const prompt = buildSpokenPrompt('affirmative');
+          await convertSentence(spokenKey, prompt);
+        }
       }
-    } catch (e: any) {
-      console.error("Sentence conversion error:", e);
-      toast({ title: "Conversion Error", description: e.message || "Could not convert sentence.", variant: "destructive" });
-    } finally {
-      setIsConverting(false);
+      return;
     }
-  }, [apiKey, aiProvider, buildPromptForType, convertedCache, toast]);
+
+    // First ensure the grammar conversion exists
+    if (!convertedCache[type]) {
+      const prompt = buildGrammarPrompt(type);
+      const success = await convertSentence(type, prompt);
+      if (!success) return;
+    }
+    setActiveGrammarType(type);
+
+    // If spoken mode is on, also convert spoken version
+    if (isSpokenMode) {
+      const spokenKey = `spoken_${type}`;
+      if (!convertedCache[spokenKey]) {
+        const prompt = buildSpokenPrompt(type);
+        await convertSentence(spokenKey, prompt);
+      }
+    }
+  }, [isSpokenMode, convertedCache, buildGrammarPrompt, buildSpokenPrompt, convertSentence]);
+
+  // Handle spoken toggle
+  const handleSpokenToggle = useCallback(async () => {
+    if (isSpokenMode) {
+      // Turn OFF spoken mode
+      setIsSpokenMode(false);
+      return;
+    }
+
+    // Turn ON spoken mode — convert current grammar type to spoken
+    const spokenKey = `spoken_${activeGrammarType}`;
+    if (convertedCache[spokenKey]) {
+      setIsSpokenMode(true);
+      return;
+    }
+
+    // If grammar type is not affirmative and not cached yet, we need the grammar version first
+    if (activeGrammarType !== 'affirmative' && !convertedCache[activeGrammarType]) {
+      const grammarPrompt = buildGrammarPrompt(activeGrammarType);
+      const success = await convertSentence(activeGrammarType, grammarPrompt);
+      if (!success) return;
+    }
+
+    const prompt = buildSpokenPrompt(activeGrammarType);
+    const success = await convertSentence(spokenKey, prompt);
+    if (success) {
+      setIsSpokenMode(true);
+    }
+  }, [isSpokenMode, activeGrammarType, convertedCache, buildGrammarPrompt, buildSpokenPrompt, convertSentence]);
 
   if (isLoading && (!sentence || sentence.length === 0)) {
     return (
@@ -212,13 +274,25 @@ Respond with ONLY a valid JSON object:
 
   const tenseTip = tenseName ? TENSE_TIME_TIPS[tenseName] : null;
 
-  // Determine what to show based on active type
-  const isAffirmative = activeSentenceType === 'affirmative';
-  const isSpoken = activeSentenceType === 'spoken';
-  const displaySentence = isAffirmative ? sentence : (convertedCache[activeSentenceType]?.sentence || sentence);
-  const displayHindi = isAffirmative ? hindiTranslation : (convertedCache[activeSentenceType]?.hindiTranslation || null);
-  const spokenNote = isSpoken ? convertedCache.spoken?.spokenNote : null;
-  const activeLabel = SENTENCE_TYPE_LABELS[activeSentenceType];
+  // Determine what to display
+  const isAffirmative = activeGrammarType === 'affirmative';
+  const currentCacheKey = isSpokenMode ? `spoken_${activeGrammarType}` : activeGrammarType;
+
+  let displaySentence: WordPos[];
+  let displayHindi: string | null | undefined;
+
+  if (isAffirmative && !isSpokenMode) {
+    // Original sentence
+    displaySentence = sentence;
+    displayHindi = hindiTranslation;
+  } else {
+    const cached = convertedCache[currentCacheKey];
+    displaySentence = cached?.sentence || sentence;
+    displayHindi = cached?.hindiTranslation || null;
+  }
+
+  const spokenNote = isSpokenMode ? convertedCache[`spoken_${activeGrammarType}`]?.spokenNote : null;
+  const grammarLabel = GRAMMAR_TYPE_LABELS[activeGrammarType];
 
   return (
     <Card className="shadow-lg border-primary border-2">
@@ -244,18 +318,18 @@ Respond with ONLY a valid JSON object:
         {isLoading && <div className="h-6 bg-muted rounded w-3/4 mb-2 animate-pulse"></div>}
         {!isLoading && (
           <>
-            {/* Sentence Type Toggle Buttons */}
+            {/* Grammar Type Buttons Row */}
             <div className="flex flex-wrap gap-1.5 sm:gap-2">
-              {GRAMMAR_TYPES.map((type) => {
-                const label = SENTENCE_TYPE_LABELS[type];
-                const isActive = activeSentenceType === type;
+              {ALL_GRAMMAR_TYPES.map((type) => {
+                const label = GRAMMAR_TYPE_LABELS[type];
+                const isActive = activeGrammarType === type;
                 return (
                   <Button
                     key={type}
                     size="sm"
                     variant={isActive ? "default" : "outline"}
                     className={`text-[10px] sm:text-xs px-2 sm:px-3 h-7 sm:h-8 ${isActive ? '' : 'opacity-70'}`}
-                    onClick={() => handleSentenceTypeChange(type)}
+                    onClick={() => handleGrammarTypeChange(type)}
                     disabled={isConverting}
                   >
                     <span>{label.en}</span>
@@ -264,20 +338,20 @@ Respond with ONLY a valid JSON object:
                 );
               })}
 
-              {/* Spoken English Button - special styled */}
+              {/* Spoken English Toggle Button */}
               <Button
                 size="sm"
-                variant={isSpoken ? "default" : "outline"}
+                variant={isSpokenMode ? "default" : "outline"}
                 className={`text-[10px] sm:text-xs px-2 sm:px-3 h-7 sm:h-8 ${
-                  isSpoken
+                  isSpokenMode
                     ? 'bg-green-600 hover:bg-green-700 text-white'
                     : 'border-green-500 text-green-700 hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-950/30'
                 }`}
-                onClick={() => handleSentenceTypeChange('spoken')}
+                onClick={handleSpokenToggle}
                 disabled={isConverting}
               >
                 <MessageCircle className="h-3 w-3 sm:h-3.5 sm:w-3.5 mr-1" />
-                <span>Spoken English</span>
+                <span>🗣️ Spoken</span>
                 <span className="hidden sm:inline ml-1 opacity-70">(बोलचाल)</span>
               </Button>
 
@@ -286,17 +360,21 @@ Respond with ONLY a valid JSON object:
               )}
             </div>
 
-            {/* Active type label badge */}
-            {!isAffirmative && (
-              <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full ${
-                isSpoken ? 'bg-green-100 dark:bg-green-950/40' : 'bg-primary/10'
-              }`}>
-                <span className={`text-xs sm:text-sm font-semibold ${isSpoken ? 'text-green-700 dark:text-green-400' : 'text-primary'}`}>
-                  {activeLabel.en}
-                </span>
-                <span className={`text-xs ${isSpoken ? 'text-green-600/70 dark:text-green-400/70' : 'text-primary/70'}`} lang="hi">
-                  ({activeLabel.hi})
-                </span>
+            {/* Active type badges */}
+            {(!isAffirmative || isSpokenMode) && (
+              <div className="flex flex-wrap gap-1.5">
+                {!isAffirmative && (
+                  <div className="inline-flex items-center gap-1 px-2.5 py-1 bg-primary/10 rounded-full">
+                    <span className="text-xs sm:text-sm font-semibold text-primary">{grammarLabel.en}</span>
+                    <span className="text-xs text-primary/70" lang="hi">({grammarLabel.hi})</span>
+                  </div>
+                )}
+                {isSpokenMode && (
+                  <div className="inline-flex items-center gap-1 px-2.5 py-1 bg-green-100 dark:bg-green-950/40 rounded-full">
+                    <span className="text-xs sm:text-sm font-semibold text-green-700 dark:text-green-400">🗣️ Spoken</span>
+                    <span className="text-xs text-green-600/70 dark:text-green-400/70" lang="hi">(बोलचाल)</span>
+                  </div>
+                )}
               </div>
             )}
 
@@ -304,7 +382,7 @@ Respond with ONLY a valid JSON object:
             <InteractiveSentence
               taggedSentence={displaySentence}
               onWordDetailRequest={onWordDetailRequest}
-              sentenceIdentifier={`main-${activeSentenceType}`}
+              sentenceIdentifier={`main-${currentCacheKey}`}
             />
             {displayHindi && (
               <p className="text-sm sm:text-base text-muted-foreground italic px-1" lang="hi">
