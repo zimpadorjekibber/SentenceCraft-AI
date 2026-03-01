@@ -10,7 +10,7 @@ import { LoadingSpinner } from './loading-spinner';
 import { InteractiveSentence } from './interactive-sentence';
 import { HighlightedRules } from './highlighted-rules';
 import { useToast } from "@/hooks/use-toast";
-import { Languages, Brain, AlertCircle, Mic, MicOff, BookOpen, Camera } from 'lucide-react';
+import { Languages, Brain, AlertCircle, Mic, MicOff, BookOpen, Camera, MessageCircle, Loader2 } from 'lucide-react';
 import type { WordPos } from '@/types/ai-types';
 import { cn } from '@/lib/utils';
 import { generateAIContentAction } from '@/ai/flows/generate-content-action';
@@ -38,6 +38,9 @@ export function HindiToEnglishTenseHelper({ apiKey, aiProvider, onWordDetailRequ
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [analysisResult, setAnalysisResult] = useState<AnalyzeHindiForEnglishTenseOutput | null>(null);
+
+  const [spokenResult, setSpokenResult] = useState<{ sentence: WordPos[]; hindiTranslation: string; spokenNote: string } | null>(null);
+  const [isSpokenLoading, setIsSpokenLoading] = useState(false);
 
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
@@ -241,6 +244,7 @@ export function HindiToEnglishTenseHelper({ apiKey, aiProvider, onWordDetailRequ
     setIsLoading(true);
     setError(null);
     setAnalysisResult(null);
+    setSpokenResult(null);
 
     const prompt = `
         You are an expert English teacher who is fluent in Hindi.
@@ -288,6 +292,53 @@ export function HindiToEnglishTenseHelper({ apiKey, aiProvider, onWordDetailRequ
       toast({ title: "Analysis Exception", description: e.message, variant: "destructive" });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleSpokenConvert = async () => {
+    if (!analysisResult?.exampleEnglishSentence?.length) return;
+    if (spokenResult) { setSpokenResult(null); return; } // Toggle off
+    if (!checkApiKey()) return;
+
+    const sentenceText = analysisResult.exampleEnglishSentence.map(w => w.word).join(' ');
+    setIsSpokenLoading(true);
+
+    const prompt = `You are a fluent English speaker who helps students learn real-life conversational English.
+
+The student has learned this textbook sentence:
+"${sentenceText}"
+
+Convert it to how a native English speaker would ACTUALLY say it in everyday conversation.
+
+Rules:
+- Use natural contractions (I'm, don't, gonna, wanna, it's, he's, etc.)
+- Use informal/casual vocabulary if appropriate
+- Use common spoken phrases and fillers if they sound natural
+- Shorten or simplify long/formal structures
+- Keep the core meaning the same
+- Also provide a "spokenNote" explaining 2-3 key differences between the textbook version and the spoken version, in simple Hindi so Indian students understand. Keep it short (2-3 bullet points).
+
+Respond with ONLY a valid JSON object:
+{
+  "sentence": [ { "word": "...", "pos": "..." }, ... ],
+  "hindiTranslation": "Hindi translation of the spoken sentence",
+  "spokenNote": "• Textbook vs Spoken difference 1\\n• Difference 2\\n• Difference 3"
+}`;
+
+    try {
+      const responseText = await generateAIContentAction(apiKey!, aiProvider, prompt);
+      const parsed = JSON.parse(responseText);
+      if (parsed.sentence && Array.isArray(parsed.sentence)) {
+        setSpokenResult({
+          sentence: parsed.sentence,
+          hindiTranslation: parsed.hindiTranslation || '',
+          spokenNote: parsed.spokenNote || '',
+        });
+      }
+    } catch (e: any) {
+      toast({ title: "Spoken Conversion Error", description: e.message || "Could not convert.", variant: "destructive" });
+    } finally {
+      setIsSpokenLoading(false);
     }
   };
 
@@ -419,13 +470,64 @@ export function HindiToEnglishTenseHelper({ apiKey, aiProvider, onWordDetailRequ
               )}
 
               {analysisResult.exampleEnglishSentence?.length > 0 && (
-                <div>
+                <div className="space-y-2">
                   <h4 className="font-semibold text-muted-foreground">Example Sentence:</h4>
                   <InteractiveSentence
                     taggedSentence={analysisResult.exampleEnglishSentence}
                     onWordDetailRequest={onWordDetailRequest}
                     sentenceIdentifier="hindiHelperExample"
                   />
+
+                  {/* Spoken English toggle button */}
+                  <Button
+                    size="sm"
+                    variant={spokenResult ? "default" : "outline"}
+                    className={`text-xs sm:text-sm ${
+                      spokenResult
+                        ? 'bg-green-600 hover:bg-green-700 text-white'
+                        : 'border-green-500 text-green-700 hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-950/30'
+                    }`}
+                    onClick={handleSpokenConvert}
+                    disabled={isSpokenLoading}
+                  >
+                    {isSpokenLoading ? (
+                      <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                    ) : (
+                      <MessageCircle className="h-3.5 w-3.5 mr-1.5" />
+                    )}
+                    🗣️ Spoken English (बोलचाल)
+                  </Button>
+
+                  {/* Spoken English result */}
+                  {spokenResult && (
+                    <div className="space-y-2 p-3 bg-green-50 dark:bg-green-950/30 rounded-md border border-green-200 dark:border-green-800">
+                      <div className="inline-flex items-center gap-1 px-2.5 py-1 bg-green-100 dark:bg-green-900/40 rounded-full">
+                        <span className="text-xs sm:text-sm font-semibold text-green-700 dark:text-green-400">🗣️ Spoken Version</span>
+                        <span className="text-xs text-green-600/70 dark:text-green-400/70" lang="hi">(बोलचाल)</span>
+                      </div>
+                      <InteractiveSentence
+                        taggedSentence={spokenResult.sentence}
+                        onWordDetailRequest={onWordDetailRequest}
+                        sentenceIdentifier="hindiHelperSpoken"
+                      />
+                      {spokenResult.hindiTranslation && (
+                        <p className="text-sm text-muted-foreground italic px-1" lang="hi">
+                          {spokenResult.hindiTranslation}
+                        </p>
+                      )}
+                      {spokenResult.spokenNote && (
+                        <div className="pt-1">
+                          <p className="text-xs sm:text-sm font-semibold text-green-700 dark:text-green-400 flex items-center gap-1.5 mb-1">
+                            <MessageCircle className="h-3.5 w-3.5 shrink-0" />
+                            📖 Textbook vs 🗣️ Real Life — क्या बदला?
+                          </p>
+                          <div className="text-xs sm:text-sm text-green-800 dark:text-green-300 whitespace-pre-line" lang="hi">
+                            {spokenResult.spokenNote}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 
