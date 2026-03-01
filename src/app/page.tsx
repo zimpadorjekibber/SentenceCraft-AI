@@ -3,7 +3,7 @@
 import React, { useState, useCallback, useMemo, useEffect, lazy, Suspense } from 'react';
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { BookOpenText, Sparkles, Wand2, FlaskConical, AlertCircle, Printer, Settings, KeyRound, BookOpen, Share2, Download } from 'lucide-react';
+import { BookOpenText, Sparkles, Wand2, FlaskConical, AlertCircle, Printer, Settings, KeyRound, BookOpen, Share2, Download, BookA } from 'lucide-react';
 import Link from 'next/link';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { AppQrCode } from '@/components/app-qr-code';
@@ -18,6 +18,7 @@ import { LoadingSpinner } from '@/components/loading-spinner';
 const SentenceModification = lazy(() => import('@/components/sentence-modification').then(m => ({ default: m.SentenceModification })));
 const SentenceAnalyzer = lazy(() => import('@/components/sentence-analyzer').then(m => ({ default: m.SentenceAnalyzer })));
 const HindiToEnglishTenseHelper = lazy(() => import('@/components/hindi-to-english-tense-helper').then(m => ({ default: m.HindiToEnglishTenseHelper })));
+const HindiEnglishDictionary = lazy(() => import('@/components/hindi-english-dictionary').then(m => ({ default: m.HindiEnglishDictionary })));
 import { AuthButton } from '@/components/auth-button';
 import { ApiKeyDialog, type AiProvider } from '@/components/api-key-dialog';
 
@@ -335,9 +336,10 @@ Respond with ONLY a valid JSON object (no extra text):
         )}
 
         <Tabs defaultValue="generator" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="generator" className="text-xs sm:text-sm"><Wand2 className="mr-2 h-4 w-4"/>Sentence Generator</TabsTrigger>
-                <TabsTrigger value="lab" className="text-xs sm:text-sm"><FlaskConical className="mr-2 h-4 w-4"/>Sentence Lab</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="generator" className="text-xs sm:text-sm"><Wand2 className="mr-1.5 h-4 w-4"/>Generator</TabsTrigger>
+                <TabsTrigger value="lab" className="text-xs sm:text-sm"><FlaskConical className="mr-1.5 h-4 w-4"/>Sentence Lab</TabsTrigger>
+                <TabsTrigger value="dictionary" className="text-xs sm:text-sm"><BookA className="mr-1.5 h-4 w-4"/>Dictionary</TabsTrigger>
             </TabsList>
             <TabsContent value="generator">
                 <main className="space-y-6 sm:space-y-8 mt-6">
@@ -389,8 +391,16 @@ Respond with ONLY a valid JSON object (no extra text):
                   />
                 </Suspense>
             </TabsContent>
+            <TabsContent value="dictionary" className="mt-6">
+                <Suspense fallback={<div className="flex justify-center p-8"><LoadingSpinner /></div>}>
+                  <HindiEnglishDictionary
+                      apiKey={apiKey}
+                      aiProvider={aiProvider}
+                  />
+                </Suspense>
+            </TabsContent>
         </Tabs>
-        
+
         <AlertDialog open={showDetailedRulesDialog} onOpenChange={setShowDetailedRulesDialog}>
             <AlertDialogContent className="sm:max-w-2xl">
                 <AlertDialogHeader>
