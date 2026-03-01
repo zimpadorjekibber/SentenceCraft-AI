@@ -1,12 +1,15 @@
 // src/components/generated-sentence-display.tsx
 "use client";
 
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { MessageSquareText, BookOpen, Clock, Info } from 'lucide-react';
+import { MessageSquareText, BookOpen, Clock, Loader2 } from 'lucide-react';
 import { InteractiveSentence } from './interactive-sentence';
 import type { WordPos } from '@/types/ai-types';
+import { generateAIContentAction } from '@/ai/flows/generate-content-action';
+import type { AiProvider } from '@/lib/ai-client';
+import { useToast } from '@/hooks/use-toast';
 
 // Tense-specific educational tips about time usage (Hindi + English)
 const TENSE_TIME_TIPS: Record<string, { label: string; tip: string; hindiTip: string }> = {
@@ -42,11 +45,27 @@ const TENSE_TIME_TIPS: Record<string, { label: string; tip: string; hindiTip: st
   },
 };
 
+type SentenceType = 'affirmative' | 'negative' | 'interrogative' | 'negative_interrogative';
+
+const SENTENCE_TYPE_LABELS: Record<SentenceType, { en: string; hi: string }> = {
+  affirmative:            { en: "Affirmative",            hi: "सकारात्मक" },
+  negative:               { en: "Negative",               hi: "नकारात्मक" },
+  interrogative:          { en: "Interrogative",          hi: "प्रश्नवाचक" },
+  negative_interrogative: { en: "Neg. Interrogative",     hi: "नकारात्मक प्रश्नवाचक" },
+};
+
+interface ConvertedSentence {
+  sentence: WordPos[];
+  hindiTranslation: string;
+}
+
 interface GeneratedSentenceDisplayProps {
   sentence: WordPos[] | null;
   hindiTranslation?: string | null;
   tenseName?: string | null;
   isLoading: boolean;
+  apiKey: string | null;
+  aiProvider: AiProvider;
   onWordDetailRequest?: (wordData: WordPos, fullSentenceText: string) => void;
   onViewDetailedRules?: () => void;
 }
@@ -56,9 +75,83 @@ export function GeneratedSentenceDisplay({
   hindiTranslation,
   tenseName,
   isLoading,
+  apiKey,
+  aiProvider,
   onWordDetailRequest,
   onViewDetailedRules,
 }: GeneratedSentenceDisplayProps) {
+  const [activeSentenceType, setActiveSentenceType] = useState<SentenceType>('affirmative');
+  const [convertedCache, setConvertedCache] = useState<Partial<Record<SentenceType, ConvertedSentence>>>({});
+  const [isConverting, setIsConverting] = useState(false);
+  const { toast } = useToast();
+
+  // Reset when the main sentence changes
+  const sentenceText = sentence?.map(w => w.word).join(' ') || '';
+  const [lastSentenceText, setLastSentenceText] = useState('');
+  if (sentenceText && sentenceText !== lastSentenceText) {
+    setLastSentenceText(sentenceText);
+    setActiveSentenceType('affirmative');
+    setConvertedCache({});
+  }
+
+  const handleSentenceTypeChange = useCallback(async (type: SentenceType) => {
+    if (type === 'affirmative') {
+      setActiveSentenceType('affirmative');
+      return;
+    }
+
+    // Check cache first
+    if (convertedCache[type]) {
+      setActiveSentenceType(type);
+      return;
+    }
+
+    if (!apiKey) {
+      toast({ title: "API Key Missing", description: "Please set your API key.", variant: "destructive" });
+      return;
+    }
+
+    setIsConverting(true);
+
+    const typeLabel = SENTENCE_TYPE_LABELS[type].en;
+    const prompt = `You are an expert English grammar teacher. Convert the following sentence to its ${typeLabel} form.
+Keep the SAME tense${tenseName ? ` ("${tenseName}")` : ''} — only change the sentence type.
+
+Original Sentence: "${sentenceText}"
+
+Rules:
+- For Negative: Add "not" / "do not" / "does not" / "did not" / "will not" etc. as appropriate for the tense.
+- For Interrogative: Rearrange to question form (Do/Does/Did/Is/Are/Was/Were/Has/Have/Had/Will/Shall + Subject + Verb...?).
+- For Negative Interrogative: Combine negative + question form (Doesn't/Don't/Didn't/Isn't/Aren't/Won't/Haven't... + Subject + Verb...?).
+
+Respond with ONLY a valid JSON object:
+{
+  "sentence": [ { "word": "...", "pos": "..." }, ... ],
+  "hindiTranslation": "Hindi translation of the converted sentence"
+}`;
+
+    try {
+      const responseText = await generateAIContentAction(apiKey, aiProvider, prompt);
+      const parsed = JSON.parse(responseText);
+
+      if (parsed.sentence && Array.isArray(parsed.sentence)) {
+        const converted: ConvertedSentence = {
+          sentence: parsed.sentence,
+          hindiTranslation: parsed.hindiTranslation || '',
+        };
+        setConvertedCache(prev => ({ ...prev, [type]: converted }));
+        setActiveSentenceType(type);
+      } else {
+        throw new Error("AI response format invalid.");
+      }
+    } catch (e: any) {
+      console.error("Sentence conversion error:", e);
+      toast({ title: "Conversion Error", description: e.message || "Could not convert sentence.", variant: "destructive" });
+    } finally {
+      setIsConverting(false);
+    }
+  }, [apiKey, aiProvider, sentenceText, tenseName, convertedCache, toast]);
+
   if (isLoading && (!sentence || sentence.length === 0)) {
     return (
       <Card className="shadow-lg animate-pulse">
@@ -84,6 +177,12 @@ export function GeneratedSentenceDisplay({
 
   const tenseTip = tenseName ? TENSE_TIME_TIPS[tenseName] : null;
 
+  // Determine what to show based on active type
+  const isAffirmative = activeSentenceType === 'affirmative';
+  const displaySentence = isAffirmative ? sentence : (convertedCache[activeSentenceType]?.sentence || sentence);
+  const displayHindi = isAffirmative ? hindiTranslation : (convertedCache[activeSentenceType]?.hindiTranslation || null);
+  const activeLabel = SENTENCE_TYPE_LABELS[activeSentenceType];
+
   return (
     <Card className="shadow-lg border-primary border-2">
       <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-2 gap-2">
@@ -108,14 +207,48 @@ export function GeneratedSentenceDisplay({
         {isLoading && <div className="h-6 bg-muted rounded w-3/4 mb-2 animate-pulse"></div>}
         {!isLoading && (
           <>
+            {/* Sentence Type Toggle Buttons */}
+            <div className="flex flex-wrap gap-1.5 sm:gap-2">
+              {(Object.keys(SENTENCE_TYPE_LABELS) as SentenceType[]).map((type) => {
+                const label = SENTENCE_TYPE_LABELS[type];
+                const isActive = activeSentenceType === type;
+                return (
+                  <Button
+                    key={type}
+                    size="sm"
+                    variant={isActive ? "default" : "outline"}
+                    className={`text-[10px] sm:text-xs px-2 sm:px-3 h-7 sm:h-8 ${isActive ? '' : 'opacity-70'}`}
+                    onClick={() => handleSentenceTypeChange(type)}
+                    disabled={isConverting}
+                  >
+                    {isConverting && !isActive && type !== 'affirmative' && !convertedCache[type] ? null : null}
+                    <span>{label.en}</span>
+                    <span className="hidden sm:inline ml-1 opacity-70">({label.hi})</span>
+                  </Button>
+                );
+              })}
+              {isConverting && (
+                <Loader2 className="h-4 w-4 animate-spin text-primary ml-1 self-center" />
+              )}
+            </div>
+
+            {/* Active type label badge */}
+            {!isAffirmative && (
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-primary/10 rounded-full">
+                <span className="text-xs sm:text-sm font-semibold text-primary">{activeLabel.en}</span>
+                <span className="text-xs text-primary/70" lang="hi">({activeLabel.hi})</span>
+              </div>
+            )}
+
+            {/* The sentence */}
             <InteractiveSentence
-              taggedSentence={sentence}
+              taggedSentence={displaySentence}
               onWordDetailRequest={onWordDetailRequest}
-              sentenceIdentifier="main"
+              sentenceIdentifier={`main-${activeSentenceType}`}
             />
-            {hindiTranslation && (
+            {displayHindi && (
               <p className="text-sm sm:text-base text-muted-foreground italic px-1" lang="hi">
-                {hindiTranslation}
+                {displayHindi}
               </p>
             )}
           </>

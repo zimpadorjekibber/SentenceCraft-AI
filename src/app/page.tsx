@@ -365,6 +365,8 @@ Respond with ONLY a valid JSON object (no extra text):
                         hindiTranslation={sentenceHindiTranslation}
                         tenseName={selectedTense}
                         isLoading={isLoading}
+                        apiKey={apiKey}
+                        aiProvider={aiProvider}
                         onViewDetailedRules={() => selectedTense && handleViewDetailedRules(selectedTense)}
                         onWordDetailRequest={handleWordDetailRequest}
                     />
