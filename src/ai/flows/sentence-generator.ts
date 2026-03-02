@@ -57,12 +57,12 @@ const TENSE_FORMULAS: Record<string, string> = {
 
 // Time-related instructions for tenses that REQUIRE time references
 const TENSE_TIME_INSTRUCTIONS: Record<string, string> = {
-  "Present Perfect Continuous": "IMPORTANT: You MUST include a time reference using 'since' (point in time) or 'for' (duration). Example: 'since morning', 'for two hours'. Without a time reference, this tense is incomplete.",
-  "Past Perfect Continuous":    "IMPORTANT: You MUST include a time reference using 'since' or 'for' to show duration. Example: 'since childhood', 'for three years'. Without a time reference, this tense is incomplete.",
-  "Future Perfect Continuous":  "IMPORTANT: You MUST include a time reference showing duration, typically using 'for...by'. Example: 'for two hours by evening'. Without a time reference, this tense is incomplete.",
-  "Present Perfect":            "TIP: Consider adding a time reference with 'since', 'for', 'already', 'just', 'yet', 'ever', 'never' to make the sentence more natural and educational.",
-  "Past Perfect":               "TIP: Consider adding a time context like 'before', 'by the time', 'already' to show sequence of past events.",
-  "Future Perfect":             "TIP: Consider adding a time reference using 'by' (e.g., 'by tomorrow', 'by next week') to show the deadline.",
+  "Present Perfect Continuous": "IMPORTANT: You MUST include a time reference using 'since' or 'for'. Wrap the time value in parentheses to show it is an example. Example output: 'I have been playing cricket since (morning)' or 'I have been playing cricket for (two hours)'. The parentheses show students the time is a replaceable example.",
+  "Past Perfect Continuous":    "IMPORTANT: You MUST include a time reference using 'since' or 'for'. Wrap the time value in parentheses. Example: 'had been playing since (childhood)' or 'for (three years)'.",
+  "Future Perfect Continuous":  "IMPORTANT: You MUST include a time reference. Wrap the time value in parentheses. Example: 'for (two hours) by (evening)'.",
+  "Present Perfect":            "TIP: Consider adding a time word like already, just, yet, ever, never. If you add one, wrap it in parentheses. Example: 'I have (already) played cricket'. The parentheses show it is optional.",
+  "Past Perfect":               "TIP: Consider adding time context. If you add one, wrap it in parentheses. Example: 'had (already) eaten' or '(before) he came'.",
+  "Future Perfect":             "TIP: Consider adding a time reference using 'by'. Wrap it in parentheses. Example: 'will have finished by (tomorrow)'.",
 };
 
 function buildPrompt(input: SentenceInput): string {
@@ -118,10 +118,15 @@ Instructions:
 2. Double-check: does the verb form match "${input.tense}" exactly? If not, fix it.
 3. Break the sentence into an array of objects where each object has "word" and "pos" (e.g., "Noun", "Verb", "Punctuation").
 4. If a determiner is needed for correct grammar, add it automatically.
-5. Provide a grammatically correct Hindi translation of the sentence.
+5. PARENTHESES RULE for optional/example time words: If the TIME REFERENCE RULE above says to wrap time in parentheses, use "(" and ")" as separate Punctuation tokens around the optional time words.
+   Example: "I have been playing cricket since (morning)" becomes:
+   [..., {"word":"since","pos":"Preposition"}, {"word":"(","pos":"Punctuation"}, {"word":"morning","pos":"Noun"}, {"word":")","pos":"Punctuation"}, ...]
+   Example: "I have (already) played cricket" becomes:
+   [..., {"word":"have","pos":"Verb"}, {"word":"(","pos":"Punctuation"}, {"word":"already","pos":"Adverb"}, {"word":")","pos":"Punctuation"}, {"word":"played","pos":"Verb"}, ...]
+6. Provide a grammatically correct Hindi translation of the sentence (without parentheses — the Hindi should be a normal complete sentence).
 ${hindiRules}
-6. SELF-CHECK before responding: (a) Is the English verb form correct for "${input.tense}"? (b) Does the Hindi use "ने" correctly for transitive verbs in Perfect tenses?
-7. Respond with ONLY a JSON object: { "sentence": [ { "word": "...", "pos": "..." }, ... ], "hindiTranslation": "हिंदी अनुवाद" }`;
+7. SELF-CHECK before responding: (a) Is the English verb form correct for "${input.tense}"? (b) Does the Hindi use "ने" correctly for transitive verbs in Perfect tenses? (c) Are optional time words wrapped in parentheses?
+8. Respond with ONLY a JSON object: { "sentence": [ { "word": "...", "pos": "..." }, ... ], "hindiTranslation": "हिंदी अनुवाद" }`;
 }
 
 export async function generateSentenceAction(input: SentenceInput): Promise<SentenceOutput> {
