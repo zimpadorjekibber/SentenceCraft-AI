@@ -52,6 +52,7 @@ export function SentenceModification({ apiKey, aiProvider, originalSentenceTagge
             1. Generate exactly three alternative versions of the original sentence.
             2. For each new sentence, break it down into an array of objects, where each object has a "word" and a "pos" (Part-of-Speech) tag.
             3. Also provide a natural Hindi translation for each alternative sentence.
+            HINDI GRAMMAR RULE FOR PERFECT TENSES: For TRANSITIVE verbs in Perfect tenses, subject MUST use ergative "ने" — मैंने, उसने, हमने, तुमने, उन्होंने. Example: "मैंने क्रिकेट खेला है" (NOT "मैं क्रिकेट खेला है"). For INTRANSITIVE verbs, do NOT use "ने".
             4. Ensure the output is a JSON object with "suggestions" (array of tagged sentences) and "hindiTranslations" (array of Hindi translations, one per suggestion).
 
             Example Output Structure:

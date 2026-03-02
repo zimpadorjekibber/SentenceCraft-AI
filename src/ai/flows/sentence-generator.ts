@@ -79,6 +79,21 @@ function buildPrompt(input: SentenceInput): string {
   const tenseFormula = TENSE_FORMULAS[input.tense] || '';
   const timeInstruction = TENSE_TIME_INSTRUCTIONS[input.tense] || '';
 
+  const isPerfectTense = input.tense.includes('Perfect') && !input.tense.includes('Continuous');
+
+  const hindiRules = isPerfectTense ? `
+CRITICAL HINDI TRANSLATION RULE (MUST FOLLOW):
+For Perfect tenses with TRANSITIVE verbs (खेलना, खाना, पढ़ना, लिखना, करना, देखना, बनाना, etc.):
+- Subject MUST take "ने": मैंने (NOT मैं), उसने (NOT वह), हमने (NOT हम), तुमने (NOT तुम), उन्होंने (NOT वे), आपने (NOT आप)
+- Verb agrees with OBJECT gender/number, NOT subject
+- CORRECT: "I have played cricket" = "मैंने क्रिकेट खेला है"
+- WRONG:  "I have played cricket" = "मैं क्रिकेट खेला है" ← NEVER do this
+- CORRECT: "She has eaten food" = "उसने खाना खाया है"
+- WRONG:  "She has eaten food" = "वह खाना खाया है" ← NEVER do this
+For INTRANSITIVE verbs (जाना, आना, सोना, रोना): Do NOT use "ने", keep subject as-is.
+- CORRECT: "He has gone" = "वह गया है" (NOT "उसने गया है")
+` : '';
+
   return `You are an expert English grammar teacher. You must be VERY STRICT about tense accuracy.
 Generate a natural, grammatically correct English sentence in the "${input.tense}" tense.
 
@@ -103,8 +118,10 @@ Instructions:
 2. Double-check: does the verb form match "${input.tense}" exactly? If not, fix it.
 3. Break the sentence into an array of objects where each object has "word" and "pos" (e.g., "Noun", "Verb", "Punctuation").
 4. If a determiner is needed for correct grammar, add it automatically.
-5. Also provide a natural Hindi translation of the complete sentence.
-6. Respond with ONLY a JSON object: { "sentence": [ { "word": "...", "pos": "..." }, ... ], "hindiTranslation": "पूरे वाक्य का हिंदी अनुवाद" }`;
+5. Provide a grammatically correct Hindi translation of the sentence.
+${hindiRules}
+6. SELF-CHECK before responding: (a) Is the English verb form correct for "${input.tense}"? (b) Does the Hindi use "ने" correctly for transitive verbs in Perfect tenses?
+7. Respond with ONLY a JSON object: { "sentence": [ { "word": "...", "pos": "..." }, ... ], "hindiTranslation": "हिंदी अनुवाद" }`;
 }
 
 export async function generateSentenceAction(input: SentenceInput): Promise<SentenceOutput> {
@@ -116,8 +133,9 @@ export async function generateSentenceAction(input: SentenceInput): Promise<Sent
 
   if (input.provider === 'groq') {
     const responseText = await callGroq(input.apiKey, [
+      { role: 'system', content: 'You are an expert English grammar teacher who also knows Hindi grammar perfectly. You MUST follow tense formulas exactly. For Hindi translations of Perfect tenses: ALWAYS use ergative "ने" with transitive verbs (मैंने, उसने, हमने — NEVER मैं, वह, हम). This is non-negotiable.' },
       { role: 'user', content: prompt },
-    ], { jsonMode: true });
+    ], { jsonMode: true, temperature: 0.4 });
 
     const parsed = JSON.parse(responseText);
     if (!parsed.sentence || !Array.isArray(parsed.sentence)) {
@@ -134,7 +152,7 @@ export async function generateSentenceAction(input: SentenceInput): Promise<Sent
   const { output } = await customAi.generate({
     model: googleAI.model('gemini-1.5-flash'),
     output: { schema: SentenceOutputSchema },
-    config: { temperature: 0.7 },
+    config: { temperature: 0.4 },
     prompt,
   });
 

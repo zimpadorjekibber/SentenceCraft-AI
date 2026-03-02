@@ -318,6 +318,10 @@ Rules:
 - Keep the core meaning the same
 - Also provide a "spokenNote" explaining 2-3 key differences between the textbook version and the spoken version, in simple Hindi so Indian students understand. Keep it short (2-3 bullet points).
 
+HINDI GRAMMAR RULE FOR PERFECT TENSES:
+- For TRANSITIVE verbs in Perfect tenses: subject MUST use ergative "ने" — मैंने, उसने, हमने, तुमने, उन्होंने. Example: "मैंने क्रिकेट खेला है" (NOT "मैं क्रिकेट खेला है").
+- For INTRANSITIVE verbs: Do NOT use "ने". Subject stays as-is.
+
 Respond with ONLY a valid JSON object:
 {
   "sentence": [ { "word": "...", "pos": "..." }, ... ],

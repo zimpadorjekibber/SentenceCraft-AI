@@ -153,6 +153,12 @@ Rules:
 - For Interrogative: Rearrange to question form (Do/Does/Did/Is/Are/Was/Were/Has/Have/Had/Will/Shall + Subject + Verb...?).
 - For Negative Interrogative: Combine negative + question form (Doesn't/Don't/Didn't/Isn't/Aren't/Won't/Haven't... + Subject + Verb...?).
 
+HINDI GRAMMAR RULE FOR PERFECT TENSES:
+- For TRANSITIVE verbs in Perfect tenses (Present/Past/Future Perfect): subject MUST use ergative "ने" — मैंने, उसने, हमने, तुमने, उन्होंने, आपने. Verb agrees with object's gender/number.
+  Example: "I have not played cricket" = "मैंने क्रिकेट नहीं खेला है" (NOT "मैं क्रिकेट नहीं खेला है")
+- For INTRANSITIVE verbs: Do NOT use "ने". Subject stays as-is: मैं, वह, हम. Verb agrees with subject.
+  Example: "He has not gone" = "वह नहीं गया है"
+
 Respond with ONLY a valid JSON object:
 {
   "sentence": [ { "word": "...", "pos": "..." }, ... ],
@@ -178,6 +184,11 @@ Rules:
 - Keep the core meaning AND sentence type (${grammarLabel}) the same
 - The result should sound like something a real person would say in a casual conversation
 - Also provide a "spokenNote" explaining 2-3 key differences between the textbook version and the spoken version, in simple Hindi so Indian students understand. Keep it short (2-3 bullet points).
+
+HINDI GRAMMAR RULE FOR PERFECT TENSES:
+- For TRANSITIVE verbs in Perfect tenses (Present/Past/Future Perfect): subject MUST use ergative "ने" — मैंने, उसने, हमने, तुमने, उन्होंने, आपने. Verb agrees with object's gender/number.
+  Example: "I've played cricket" = "मैंने क्रिकेट खेला है" (NOT "मैं क्रिकेट खेला है")
+- For INTRANSITIVE verbs: Do NOT use "ने". Subject stays as-is: मैं, वह, हम.
 
 Respond with ONLY a valid JSON object:
 {
