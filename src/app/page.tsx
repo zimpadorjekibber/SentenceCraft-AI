@@ -3,7 +3,7 @@
 import React, { useState, useCallback, useMemo, useEffect, lazy, Suspense } from 'react';
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { BookOpenText, Sparkles, Wand2, FlaskConical, AlertCircle, Printer, Settings, KeyRound, BookOpen, Share2, Download, BookA } from 'lucide-react';
+import { BookOpenText, Sparkles, Wand2, FlaskConical, AlertCircle, Printer, Settings, KeyRound, BookOpen, Share2, Download, BookA, GraduationCap } from 'lucide-react';
 import Link from 'next/link';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { AppQrCode } from '@/components/app-qr-code';
@@ -19,8 +19,12 @@ const SentenceModification = lazy(() => import('@/components/sentence-modificati
 const SentenceAnalyzer = lazy(() => import('@/components/sentence-analyzer').then(m => ({ default: m.SentenceAnalyzer })));
 const HindiToEnglishTenseHelper = lazy(() => import('@/components/hindi-to-english-tense-helper').then(m => ({ default: m.HindiToEnglishTenseHelper })));
 const HindiEnglishDictionary = lazy(() => import('@/components/hindi-english-dictionary').then(m => ({ default: m.HindiEnglishDictionary })));
+const PracticeQuiz = lazy(() => import('@/components/practice-quiz').then(m => ({ default: m.PracticeQuiz })));
 import { AuthButton } from '@/components/auth-button';
+import { ProgressDashboard } from '@/components/progress-dashboard';
 import { ApiKeyDialog, type AiProvider } from '@/components/api-key-dialog';
+import { useAuth } from '@/context/auth-context';
+import { saveSentence, incrementStat, incrementTenseUsage, updateStreak } from '@/lib/firestore-service';
 
 // AI Server Actions
 import { generateSentenceAction } from '@/ai/flows/sentence-generator';
@@ -45,8 +49,11 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 export default function HomePage() {
+  const { user, refreshStats } = useAuth();
   const [apiKey, setApiKey] = useState<string | null>(null);
   const [aiProvider, setAiProvider] = useState<AiProvider>('gemini');
+  const [showProgressDashboard, setShowProgressDashboard] = useState(false);
+  const [activeTab, setActiveTab] = useState('generator');
   const [wordInputs, setWordInputs] = useState<WordInputs>({
     subject: '', verb: '', object: '', adjective: '', adverb: '', 
     preposition: '', conjunction: '', determiner: '', interjection: '', otherWords: ''
@@ -175,6 +182,25 @@ export default function HomePage() {
         setGeneratedSentence(result.sentence);
         setSentenceHindiTranslation(result.hindiTranslation || null);
         toast({ title: "Sentence Crafted!", description: "AI has successfully generated your sentence." });
+
+        // Save to Firestore (fire-and-forget)
+        if (user) {
+          const sentenceText = result.sentence.map(w => w.word).join(' ');
+          saveSentence(user.uid, {
+            sentenceText,
+            sentenceTagged: result.sentence,
+            hindiTranslation: result.hindiTranslation || null,
+            tense: selectedTense,
+            source: 'generator',
+            action: null,
+            inputWords: { ...wordInputs },
+            isFavorite: false,
+          }).catch(() => {});
+          incrementStat(user.uid, 'totalSentencesGenerated').catch(() => {});
+          if (selectedTense) incrementTenseUsage(user.uid, selectedTense).catch(() => {});
+          updateStreak(user.uid).catch(() => {});
+          refreshStats().catch(() => {});
+        }
       } else {
         throw new Error("AI returned an empty sentence. Please try again.");
       }
@@ -265,7 +291,10 @@ Respond with ONLY a valid JSON object (no extra text):
             {/* Left group */}
             <div className="flex items-center gap-0.5">
               <AppQrCode />
-              <AuthButton />
+              <AuthButton
+                onOpenProgress={() => setShowProgressDashboard(true)}
+                onOpenQuiz={() => setActiveTab('quiz')}
+              />
             </div>
             {/* Right group */}
             <div className="flex items-center gap-0.5">
@@ -338,11 +367,12 @@ Respond with ONLY a valid JSON object (no extra text):
             </Alert>
         )}
 
-        <Tabs defaultValue="generator" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="generator" className="text-xs sm:text-sm"><Wand2 className="mr-1.5 h-4 w-4"/>Generator</TabsTrigger>
-                <TabsTrigger value="lab" className="text-xs sm:text-sm"><FlaskConical className="mr-1.5 h-4 w-4"/>Sentence Lab</TabsTrigger>
-                <TabsTrigger value="dictionary" className="text-xs sm:text-sm"><BookA className="mr-1.5 h-4 w-4"/>Dictionary</TabsTrigger>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-4">
+                <TabsTrigger value="generator" className="text-xs sm:text-sm"><Wand2 className="mr-1 h-3.5 w-3.5 sm:mr-1.5 sm:h-4 sm:w-4"/>Generator</TabsTrigger>
+                <TabsTrigger value="lab" className="text-xs sm:text-sm"><FlaskConical className="mr-1 h-3.5 w-3.5 sm:mr-1.5 sm:h-4 sm:w-4"/>Sentence Lab</TabsTrigger>
+                <TabsTrigger value="dictionary" className="text-xs sm:text-sm"><BookA className="mr-1 h-3.5 w-3.5 sm:mr-1.5 sm:h-4 sm:w-4"/>Dictionary</TabsTrigger>
+                <TabsTrigger value="quiz" className="text-xs sm:text-sm"><GraduationCap className="mr-1 h-3.5 w-3.5 sm:mr-1.5 sm:h-4 sm:w-4"/>Quiz</TabsTrigger>
             </TabsList>
             <TabsContent value="generator">
                 <main className="space-y-6 sm:space-y-8 mt-6">
@@ -404,6 +434,14 @@ Respond with ONLY a valid JSON object (no extra text):
             <TabsContent value="dictionary" className="mt-6">
                 <Suspense fallback={<div className="flex justify-center p-8"><LoadingSpinner /></div>}>
                   <HindiEnglishDictionary
+                      apiKey={apiKey}
+                      aiProvider={aiProvider}
+                  />
+                </Suspense>
+            </TabsContent>
+            <TabsContent value="quiz" className="mt-6">
+                <Suspense fallback={<div className="flex justify-center p-8"><LoadingSpinner /></div>}>
+                  <PracticeQuiz
                       apiKey={apiKey}
                       aiProvider={aiProvider}
                   />
@@ -553,6 +591,8 @@ Respond with ONLY a valid JSON object (no extra text):
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
+
+        <ProgressDashboard isOpen={showProgressDashboard} onOpenChange={setShowProgressDashboard} />
 
         <footer className="mt-12 sm:mt-16 text-center text-muted-foreground text-xs sm:text-sm space-y-2">
           <Link href="/print-chart" passHref>

@@ -19,6 +19,8 @@ import { generateAIContentAction } from '@/ai/flows/generate-content-action';
 import type { AiProvider } from '@/lib/ai-client';
 import { useHindiTransliteration } from '@/hooks/use-hindi-transliteration';
 import { useCameraOcr } from '@/hooks/use-camera-ocr';
+import { useAuth } from '@/context/auth-context';
+import { incrementStat, incrementFeatureUsage, updateStreak } from '@/lib/firestore-service';
 
 // ─── Types ────────────────────────────────────────────────────
 interface DictionaryResult {
@@ -92,6 +94,7 @@ function isHindiText(text: string): boolean {
 
 // ─── Component ────────────────────────────────────────────────
 export function HindiEnglishDictionary({ apiKey, aiProvider }: HindiEnglishDictionaryProps) {
+  const { user, refreshStats } = useAuth();
   const [inputText, setInputText] = useState('');
   const [searchDirection, setSearchDirection] = useState<'hi2en' | 'en2hi'>('hi2en');
   const [isLoading, setIsLoading] = useState(false);
@@ -386,6 +389,13 @@ If the input is not recognizable English, respond with: { "error": "This word co
         toast({ title: "Error", description: parsed.error, variant: "destructive" });
       } else {
         setResult(parsed as DictionaryResult);
+        // Track dictionary usage in Firestore
+        if (user) {
+          incrementStat(user.uid, 'totalDictionaryLookups').catch(() => {});
+          incrementFeatureUsage(user.uid, 'dictionary').catch(() => {});
+          updateStreak(user.uid).catch(() => {});
+          refreshStats().catch(() => {});
+        }
       }
     } catch (e: any) {
       setError(e.message || "An unexpected error occurred.");

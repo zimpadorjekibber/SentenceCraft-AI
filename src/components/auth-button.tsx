@@ -15,9 +15,14 @@ import {
   DropdownMenuTrigger,
 } from './ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
-import { LogIn, LogOut } from 'lucide-react';
+import { LogIn, LogOut, Target, GraduationCap } from 'lucide-react';
 
-export function AuthButton() {
+interface AuthButtonProps {
+  onOpenProgress?: () => void;
+  onOpenQuiz?: () => void;
+}
+
+export function AuthButton({ onOpenProgress, onOpenQuiz }: AuthButtonProps) {
   const { user } = useAuth();
 
   const handleSignIn = async () => {
@@ -74,6 +79,19 @@ export function AuthButton() {
               <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
             </div>
           </DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          {onOpenProgress && (
+            <DropdownMenuItem onClick={onOpenProgress} className="py-2.5">
+              <Target className="mr-2 h-4 w-4" />
+              <span>My Progress / मेरी प्रगति</span>
+            </DropdownMenuItem>
+          )}
+          {onOpenQuiz && (
+            <DropdownMenuItem onClick={onOpenQuiz} className="py-2.5">
+              <GraduationCap className="mr-2 h-4 w-4" />
+              <span>Practice Quiz / अभ्यास क्विज़</span>
+            </DropdownMenuItem>
+          )}
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={handleSignOut} className="py-2.5">
             <LogOut className="mr-2 h-4 w-4" />

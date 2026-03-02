@@ -17,6 +17,8 @@ import { generateAIContentAction } from '@/ai/flows/generate-content-action';
 import type { AiProvider } from '@/lib/ai-client';
 import { useHindiTransliteration } from '@/hooks/use-hindi-transliteration';
 import { useCameraOcr } from '@/hooks/use-camera-ocr';
+import { useAuth } from '@/context/auth-context';
+import { saveSentence, incrementStat, incrementTenseUsage, incrementFeatureUsage, updateStreak } from '@/lib/firestore-service';
 
 interface AnalyzeHindiForEnglishTenseOutput {
   identifiedEnglishTense: string;
@@ -34,6 +36,7 @@ interface HindiToEnglishTenseHelperProps {
 }
 
 export function HindiToEnglishTenseHelper({ apiKey, aiProvider, onWordDetailRequest, onViewDetailedRulesRequest }: HindiToEnglishTenseHelperProps) {
+  const { user, refreshStats } = useAuth();
   const [hindiInput, setHindiInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -286,6 +289,29 @@ export function HindiToEnglishTenseHelper({ apiKey, aiProvider, onWordDetailRequ
           }).flat();
         }
         setAnalysisResult(parsedResult);
+        // Save to Firestore
+        if (user && parsedResult.exampleEnglishSentence) {
+          const sentenceText = Array.isArray(parsedResult.exampleEnglishSentence)
+            ? parsedResult.exampleEnglishSentence.map((w: WordPos) => w.word).join(' ')
+            : String(parsedResult.exampleEnglishSentence);
+          saveSentence(user.uid, {
+            sentenceText,
+            sentenceTagged: Array.isArray(parsedResult.exampleEnglishSentence) ? parsedResult.exampleEnglishSentence : [],
+            hindiTranslation: hindiInput,
+            tense: parsedResult.identifiedEnglishTense || null,
+            source: 'hindi_helper',
+            action: 'tense_identification',
+            inputWords: null,
+            isFavorite: false,
+          }).catch(() => {});
+          incrementStat(user.uid, 'totalAnalyses').catch(() => {});
+          if (parsedResult.identifiedEnglishTense) {
+            incrementTenseUsage(user.uid, parsedResult.identifiedEnglishTense).catch(() => {});
+          }
+          incrementFeatureUsage(user.uid, 'hindi_helper').catch(() => {});
+          updateStreak(user.uid).catch(() => {});
+          refreshStats().catch(() => {});
+        }
       }
     } catch (e: any) {
       setError(e.message || "An unexpected error occurred.");

@@ -42,6 +42,8 @@ import { GRAMMAR_FEATURE_RULES } from '@/lib/grammar-feature-rules';
 import { generateAIContentAction } from '@/ai/flows/generate-content-action';
 import type { AiProvider } from '@/lib/ai-client';
 import { useCameraOcr } from '@/hooks/use-camera-ocr';
+import { useAuth } from '@/context/auth-context';
+import { saveSentence, incrementStat, updateStreak } from '@/lib/firestore-service';
 
 interface SentenceAnalyzerProps {
   apiKey: string | null;
@@ -82,6 +84,7 @@ function wordPosArrayToString(sentence: WordPos[]): string {
 }
 
 export function SentenceAnalyzer({ apiKey, aiProvider, onWordDetailRequest }: SentenceAnalyzerProps) {
+  const { user, refreshStats } = useAuth();
   const [inputText, setInputText] = useState('');
   const [analyzedSentence, setAnalyzedSentence] = useState<WordPos[] | null>(null);
   const [analyzedSentenceHindi, setAnalyzedSentenceHindi] = useState<string | null>(null);
@@ -258,6 +261,23 @@ export function SentenceAnalyzer({ apiKey, aiProvider, onWordDetailRequest }: Se
             setAnalyzedSentenceHindi(parsedResult.hindiTranslation || null);
             setLastTransformationExplanation(null);
             toast({ title: "Analysis Complete!" });
+            // Save analysis to Firestore
+            if (user) {
+              const text = parsedResult.taggedSentence.map((w: WordPos) => w.word).join(' ');
+              saveSentence(user.uid, {
+                sentenceText: text,
+                sentenceTagged: parsedResult.taggedSentence,
+                hindiTranslation: parsedResult.hindiTranslation || null,
+                tense: null,
+                source: 'analyzer',
+                action: actionType,
+                inputWords: null,
+                isFavorite: false,
+              }).catch(() => {});
+              incrementStat(user.uid, 'totalAnalyses').catch(() => {});
+              updateStreak(user.uid).catch(() => {});
+              refreshStats().catch(() => {});
+            }
         } else {
             throw new Error("The AI response was not in the expected format.");
         }
