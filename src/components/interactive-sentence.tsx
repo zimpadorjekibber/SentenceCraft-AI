@@ -20,6 +20,7 @@ interface InteractiveSentenceProps {
   taggedSentence: WordPos[];
   onWordDetailRequest?: (wordData: WordPos, fullSentenceText: string) => void;
   sentenceIdentifier?: string;
+  highlightMode?: "pos" | "tense";
 }
 
 const WordPartOfSpeechColors: Record<string, string> = {
@@ -38,6 +39,25 @@ const WordPartOfSpeechColors: Record<string, string> = {
   Punctuation: "text-foreground/80",
   Unknown: "text-foreground",
 };
+
+// Tense-mode highlighting: only color auxiliary verbs, main verbs, and negation words
+const TenseHighlightColors: Record<string, string> = {
+  Auxiliary: "text-sky-600 dark:text-sky-400 font-semibold",
+  Verb: "text-emerald-600 dark:text-emerald-400 font-semibold",
+  Negation: "text-red-600 dark:text-red-400 font-semibold",
+};
+
+function isNegationWord(word: string): boolean {
+  const lower = word.toLowerCase();
+  return lower === "not" || lower.endsWith("n't") || lower === "never";
+}
+
+function getTenseHighlightClass(taggedWord: WordPos): string {
+  if (taggedWord.pos === "Auxiliary") return TenseHighlightColors.Auxiliary;
+  if (taggedWord.pos === "Verb") return TenseHighlightColors.Verb;
+  if (isNegationWord(taggedWord.word)) return TenseHighlightColors.Negation;
+  return "text-foreground";
+}
 
 const POS_HINDI_MAP: Record<string, string> = {
   Noun: "संज्ञा",
@@ -59,12 +79,17 @@ function InteractiveWord({
   taggedWord,
   fullSentenceText,
   onWordDetailRequest,
+  highlightMode = "pos",
 }: {
   taggedWord: WordPos;
   fullSentenceText: string;
   onWordDetailRequest?: (wordData: WordPos, fullSentenceText: string) => void;
+  highlightMode?: "pos" | "tense";
 }) {
   const posLabel = `${taggedWord.pos}${POS_HINDI_MAP[taggedWord.pos] ? ` (${POS_HINDI_MAP[taggedWord.pos]})` : ''}`;
+  const colorClass = highlightMode === "tense"
+    ? getTenseHighlightClass(taggedWord)
+    : (WordPartOfSpeechColors[taggedWord.pos] || WordPartOfSpeechColors.Unknown);
 
   const handleVocabClick = useCallback(() => {
     onWordDetailRequest?.(taggedWord, fullSentenceText);
@@ -84,7 +109,7 @@ function InteractiveWord({
           <TooltipTrigger asChild>
             <PopoverTrigger asChild>
               <span
-                className={`cursor-pointer hover:bg-foreground/10 active:scale-95 transition-all px-0.5 py-1 rounded-sm ${WordPartOfSpeechColors[taggedWord.pos] || WordPartOfSpeechColors.Unknown}`}
+                className={`cursor-pointer hover:bg-foreground/10 active:scale-95 transition-all px-0.5 py-1 rounded-sm ${colorClass}`}
                 role="button"
                 tabIndex={0}
                 onKeyDown={handleKeyDown}
@@ -119,7 +144,7 @@ function InteractiveWord({
     <Tooltip>
       <TooltipTrigger asChild>
         <span
-          className={`cursor-pointer hover:bg-foreground/10 active:scale-95 transition-all px-0.5 py-1 rounded-sm ${WordPartOfSpeechColors[taggedWord.pos] || WordPartOfSpeechColors.Unknown}`}
+          className={`cursor-pointer hover:bg-foreground/10 active:scale-95 transition-all px-0.5 py-1 rounded-sm ${colorClass}`}
           role="button"
           tabIndex={0}
           onKeyDown={handleKeyDown}
@@ -134,7 +159,7 @@ function InteractiveWord({
   );
 }
 
-export function InteractiveSentence({ taggedSentence, onWordDetailRequest, sentenceIdentifier = "s" }: InteractiveSentenceProps) {
+export function InteractiveSentence({ taggedSentence, onWordDetailRequest, sentenceIdentifier = "s", highlightMode = "pos" }: InteractiveSentenceProps) {
   if (!taggedSentence || !Array.isArray(taggedSentence) || taggedSentence.length === 0) return null;
 
   const fullSentenceText = taggedSentence.map(tw => tw.word).join(" ");
@@ -151,6 +176,7 @@ export function InteractiveSentence({ taggedSentence, onWordDetailRequest, sente
                 taggedWord={taggedWord}
                 fullSentenceText={fullSentenceText}
                 onWordDetailRequest={onWordDetailRequest}
+                highlightMode={highlightMode}
               />
             )}
             {(index < taggedSentence.length - 1 && !/^[.,!?;:]$/.test(taggedSentence[index + 1]?.word)) && '\u00A0'}

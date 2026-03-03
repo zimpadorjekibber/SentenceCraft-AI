@@ -10,6 +10,8 @@ import type { WordPos } from '@/types/ai-types';
 import { generateAIContentAction } from '@/ai/flows/generate-content-action';
 import type { AiProvider } from '@/lib/ai-client';
 import { useToast } from '@/hooks/use-toast';
+import { TENSE_RULES } from '@/lib/tense-rules-data';
+import { HighlightedRules } from './highlighted-rules';
 
 // Tense-specific educational tips about time usage (Hindi + English)
 const TENSE_TIME_TIPS: Record<string, { label: string; tip: string; hindiTip: string }> = {
@@ -55,6 +57,69 @@ const GRAMMAR_TYPE_LABELS: Record<GrammarType, { en: string; hi: string }> = {
 };
 
 const ALL_GRAMMAR_TYPES: GrammarType[] = ['affirmative', 'negative', 'interrogative', 'negative_interrogative'];
+
+// Hindi suffix identifiers for each tense (पहचान)
+const TENSE_HINDI_SUFFIXES: Record<string, string> = {
+  "Present Indefinite": "ता है, ती है, ते हैं",
+  "Present Continuous": "रहा है, रही है, रहे हैं, रहा हूँ",
+  "Present Perfect": "चुका है, चुकी है, चुके हैं, या है, यी है, ये हैं",
+  "Present Perfect Continuous": "से रहा है, से रही है, से रहे हैं",
+  "Past Indefinite": "ता था, ती थी, ते थे, या, यी, ये",
+  "Past Continuous": "रहा था, रही थी, रहे थे",
+  "Past Perfect": "चुका था, चुकी थी, चुके थे, या था, यी थी, ये थे",
+  "Past Perfect Continuous": "से रहा था, से रही थी, से रहे थे",
+  "Future Indefinite": "गा, गी, गे",
+  "Future Continuous": "रहा होगा, रही होगी, रहे होंगे",
+  "Future Perfect": "चुका होगा, चुकी होगी, चुके होंगे",
+  "Future Perfect Continuous": "से रहा होगा, से रही होगी, से रहे होंगे",
+};
+
+// Map grammar type to the rule label identifier in the XML markup
+const GRAMMAR_TO_RULE_ID: Record<GrammarType, string> = {
+  affirmative: 'type="rule_label_A"',
+  negative: 'type="rule_label_N"',
+  interrogative: 'type="rule_label_I"',
+  negative_interrogative: 'type="rule_label_NI_N"',
+};
+
+// Inline display of tense rules with active grammar type highlighted
+function TenseRulesInline({
+  rules,
+  activeGrammarType,
+  hindiSuffix,
+}: {
+  rules: string;
+  activeGrammarType: GrammarType;
+  hindiSuffix?: string;
+}) {
+  const lines = rules.split('\n').filter(line => line.trim());
+  const activeId = GRAMMAR_TO_RULE_ID[activeGrammarType];
+
+  return (
+    <div className="text-xs sm:text-sm bg-muted/40 rounded-md p-2 sm:p-2.5 space-y-0.5 font-mono border border-border/50">
+      {hindiSuffix && (
+        <p className="text-[10px] sm:text-xs text-muted-foreground mb-1 font-sans" lang="hi">
+          {hindiSuffix}
+        </p>
+      )}
+      {lines.map((line, i) => {
+        const isActive = line.includes(activeId);
+        return (
+          <div
+            key={i}
+            className={`px-1.5 py-0.5 rounded text-[11px] sm:text-xs leading-relaxed ${
+              isActive
+                ? 'bg-primary/10 border-l-2 border-primary font-semibold'
+                : 'opacity-50'
+            }`}
+          >
+            <HighlightedRules rules={line} />
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 interface ConvertedSentence {
   sentence: WordPos[];
@@ -122,6 +187,13 @@ export function GeneratedSentenceDisplay({
       const parsed = JSON.parse(responseText);
 
       if (parsed.sentence && Array.isArray(parsed.sentence)) {
+        // Ensure question mark for interrogative sentence types
+        if (cacheKey.includes('interrogative') && parsed.sentence.length > 0) {
+          const lastWord = parsed.sentence[parsed.sentence.length - 1];
+          if (lastWord.word !== '?') {
+            parsed.sentence.push({ word: '?', pos: 'Punctuation' });
+          }
+        }
         const converted: ConvertedSentence = {
           sentence: parsed.sentence,
           hindiTranslation: parsed.hindiTranslation || '',
@@ -150,8 +222,9 @@ Original Sentence: "${sentenceText}"
 
 Rules:
 - For Negative: Add "not" / "do not" / "does not" / "did not" / "will not" etc. as appropriate for the tense.
-- For Interrogative: Rearrange to question form (Do/Does/Did/Is/Are/Was/Were/Has/Have/Had/Will/Shall + Subject + Verb...?).
-- For Negative Interrogative: Combine negative + question form (Doesn't/Don't/Didn't/Isn't/Aren't/Won't/Haven't... + Subject + Verb...?).
+- For Interrogative: Rearrange to question form (Do/Does/Did/Is/Are/Was/Were/Has/Have/Had/Will/Shall + Subject + Verb...?). MUST end with question mark.
+- For Negative Interrogative: Combine negative + question form (Doesn't/Don't/Didn't/Isn't/Aren't/Won't/Haven't... + Subject + Verb...?). MUST end with question mark.
+- IMPORTANT: For Interrogative and Negative Interrogative, ALWAYS include { "word": "?", "pos": "Punctuation" } as the LAST element in the sentence array.
 
 HINDI GRAMMAR RULE FOR PERFECT TENSES:
 - For TRANSITIVE verbs in Perfect tenses (Present/Past/Future Perfect): subject MUST use ergative "ने" — मैंने, उसने, हमने, तुमने, उन्होंने, आपने. Verb agrees with object's gender/number.
@@ -389,11 +462,21 @@ Respond with ONLY a valid JSON object:
               </div>
             )}
 
+            {/* Tense Rules Display */}
+            {tenseName && TENSE_RULES[tenseName] && (
+              <TenseRulesInline
+                rules={TENSE_RULES[tenseName]}
+                activeGrammarType={activeGrammarType}
+                hindiSuffix={TENSE_HINDI_SUFFIXES[tenseName]}
+              />
+            )}
+
             {/* The sentence */}
             <InteractiveSentence
               taggedSentence={displaySentence}
               onWordDetailRequest={onWordDetailRequest}
               sentenceIdentifier={`main-${currentCacheKey}`}
+              highlightMode="tense"
             />
             {displayHindi && (
               <p className="text-sm sm:text-base text-muted-foreground italic px-1" lang="hi">
