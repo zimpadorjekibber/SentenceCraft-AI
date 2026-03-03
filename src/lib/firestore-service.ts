@@ -192,14 +192,16 @@ export async function saveQuizResult(
 
 export async function getQuizHistory(
   uid: string,
-  options: { limitCount?: number; tense?: string } = {}
+  options: { limitCount?: number; tense?: string; category?: string; topic?: string } = {}
 ): Promise<QuizResult[]> {
   if (!db) return [];
-  const { limitCount = 20, tense } = options;
+  const { limitCount = 20, tense, category, topic } = options;
   const colRef = collection(db, 'users', uid, 'quizResults');
 
   const constraints: any[] = [orderBy('createdAt', 'desc')];
   if (tense) constraints.push(where('tense', '==', tense));
+  if (category) constraints.push(where('category', '==', category));
+  if (topic) constraints.push(where('topic', '==', topic));
   constraints.push(limit(limitCount));
 
   const q = query(colRef, ...constraints);

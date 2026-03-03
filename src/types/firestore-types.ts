@@ -40,7 +40,8 @@ export interface SavedSentence {
 
 export interface QuizQuestion {
   id: number;
-  type: 'fill_blank' | 'identify_tense' | 'correct_error' | 'translate';
+  type: 'fill_blank' | 'identify_tense' | 'identify_voice' | 'identify_speech'
+    | 'identify_modal' | 'identify_type' | 'correct_error' | 'translate' | 'transform';
   questionText: string;
   questionHindi?: string;
   options: string[];
@@ -53,7 +54,9 @@ export interface QuizQuestion {
 
 export interface QuizResult {
   id?: string;
-  tense: string;
+  tense?: string; // backward-compat: old records have this
+  category?: string; // new: e.g. "tenses", "modals"
+  topic?: string; // new: e.g. "present_indefinite", "can_could"
   totalQuestions: number;
   correctAnswers: number;
   score: number;
