@@ -368,11 +368,11 @@ Respond with ONLY a valid JSON object (no extra text):
         )}
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
-                <TabsTrigger value="generator" className="text-xs sm:text-sm"><Wand2 className="mr-1 h-3.5 w-3.5 sm:mr-1.5 sm:h-4 sm:w-4"/>Generator</TabsTrigger>
-                <TabsTrigger value="lab" className="text-xs sm:text-sm"><FlaskConical className="mr-1 h-3.5 w-3.5 sm:mr-1.5 sm:h-4 sm:w-4"/>Sentence Lab</TabsTrigger>
-                <TabsTrigger value="dictionary" className="text-xs sm:text-sm"><BookA className="mr-1 h-3.5 w-3.5 sm:mr-1.5 sm:h-4 sm:w-4"/>Dictionary</TabsTrigger>
-                <TabsTrigger value="quiz" className="text-xs sm:text-sm"><GraduationCap className="mr-1 h-3.5 w-3.5 sm:mr-1.5 sm:h-4 sm:w-4"/>Quiz</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-4 h-auto p-1 gap-1">
+                <TabsTrigger value="generator" className="text-xs sm:text-sm py-2 data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:shadow-md border border-transparent data-[state=active]:border-blue-600"><Wand2 className="mr-1 h-3.5 w-3.5 sm:mr-1.5 sm:h-4 sm:w-4"/>Generator</TabsTrigger>
+                <TabsTrigger value="lab" className="text-xs sm:text-sm py-2 data-[state=active]:bg-purple-500 data-[state=active]:text-white data-[state=active]:shadow-md border border-transparent data-[state=active]:border-purple-600"><FlaskConical className="mr-1 h-3.5 w-3.5 sm:mr-1.5 sm:h-4 sm:w-4"/>Sentence Lab</TabsTrigger>
+                <TabsTrigger value="dictionary" className="text-xs sm:text-sm py-2 data-[state=active]:bg-emerald-500 data-[state=active]:text-white data-[state=active]:shadow-md border border-transparent data-[state=active]:border-emerald-600"><BookA className="mr-1 h-3.5 w-3.5 sm:mr-1.5 sm:h-4 sm:w-4"/>Dictionary</TabsTrigger>
+                <TabsTrigger value="quiz" className="text-xs sm:text-sm py-2 data-[state=active]:bg-amber-500 data-[state=active]:text-white data-[state=active]:shadow-md border border-transparent data-[state=active]:border-amber-600"><GraduationCap className="mr-1 h-3.5 w-3.5 sm:mr-1.5 sm:h-4 sm:w-4"/>Quiz</TabsTrigger>
             </TabsList>
             <TabsContent value="generator">
                 <main className="space-y-6 sm:space-y-8 mt-6">
