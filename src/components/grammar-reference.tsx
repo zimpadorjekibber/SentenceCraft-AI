@@ -121,7 +121,7 @@ export function GrammarReference() {
           Grammar Reference / व्याकरण संदर्भ
         </CardTitle>
         <p className="text-xs sm:text-sm text-muted-foreground mt-1" lang="hi">
-          Parts of Speech — हर शब्द की पहचान और प्रकार सीखें!
+          Parts of Speech, Tense, Voice, Narration, Gerund, Participle और बहुत कुछ — सब एक जगह!
         </p>
       </CardHeader>
       <CardContent className="px-2 sm:px-6 pb-3 sm:pb-6">
