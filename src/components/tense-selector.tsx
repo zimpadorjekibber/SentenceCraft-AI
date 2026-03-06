@@ -78,22 +78,22 @@ const TENSE_BUTTON_STYLES: Record<string, string> = {
 export function TenseSelector({ selectedTense, onTenseSelect, disabled }: TenseSelectorProps) {
   return (
     <Card className="shadow-lg border-2 border-primary/20">
-      <CardHeader>
+      <CardHeader className="px-3 sm:px-6 pb-2 sm:pb-4">
         <CardTitle className="text-xl sm:text-2xl md:text-3xl font-headline text-primary flex items-center">
           <CalendarClock className="mr-3 h-6 w-6 sm:h-7 sm:w-7 text-primary" />
           Select a Tense
         </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="px-2 sm:px-6 pb-3 sm:pb-6">
         {Object.entries(TENSES_CATEGORIES).map(([category, data]) => {
           const CategoryIcon = data.icon;
           return (
-            <div key={category} className="mb-8 last:mb-0">
-              <h3 className="text-lg sm:text-xl font-bold text-primary/90 dark:text-primary/80 mb-4 flex items-center">
+            <div key={category} className="mb-5 sm:mb-8 last:mb-0">
+              <h3 className="text-lg sm:text-xl font-bold text-primary/90 dark:text-primary/80 mb-3 sm:mb-4 flex items-center px-1 sm:px-0">
                 <CategoryIcon className="mr-3 h-6 w-6 text-accent" />
                 {category} Tenses
               </h3>
-              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
                 {data.tenses.map((tenseInfo) => (
                   <Button
                     key={tenseInfo.name} // Use full name as key for stability
