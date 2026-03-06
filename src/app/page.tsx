@@ -20,6 +20,7 @@ const SentenceAnalyzer = lazy(() => import('@/components/sentence-analyzer').the
 const HindiToEnglishTenseHelper = lazy(() => import('@/components/hindi-to-english-tense-helper').then(m => ({ default: m.HindiToEnglishTenseHelper })));
 const HindiEnglishDictionary = lazy(() => import('@/components/hindi-english-dictionary').then(m => ({ default: m.HindiEnglishDictionary })));
 const PracticeQuiz = lazy(() => import('@/components/practice-quiz').then(m => ({ default: m.PracticeQuiz })));
+const GrammarReference = lazy(() => import('@/components/grammar-reference').then(m => ({ default: m.GrammarReference })));
 import { AuthButton } from '@/components/auth-button';
 import { ProgressDashboard } from '@/components/progress-dashboard';
 import { ApiKeyDialog, type AiProvider } from '@/components/api-key-dialog';
@@ -437,6 +438,7 @@ Respond with ONLY a valid JSON object (no extra text):
                       apiKey={apiKey}
                       aiProvider={aiProvider}
                   />
+                  <GrammarReference />
                 </Suspense>
             </TabsContent>
             <TabsContent value="quiz" className="mt-6">
