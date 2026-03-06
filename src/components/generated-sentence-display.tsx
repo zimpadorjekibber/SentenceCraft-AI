@@ -82,7 +82,7 @@ const GRAMMAR_TO_RULE_ID: Record<GrammarType, string> = {
   negative_interrogative: 'type="rule_label_NI_N"',
 };
 
-// Inline display of tense rules with active grammar type highlighted
+// Inline display of only the active tense rule
 function TenseRulesInline({
   rules,
   activeGrammarType,
@@ -94,29 +94,20 @@ function TenseRulesInline({
 }) {
   const lines = rules.split('\n').filter(line => line.trim());
   const activeId = GRAMMAR_TO_RULE_ID[activeGrammarType];
+  const activeLine = lines.find(line => line.includes(activeId));
 
   return (
-    <div className="text-xs sm:text-sm bg-muted/40 rounded-md p-2 sm:p-2.5 space-y-0.5 font-mono border border-border/50">
+    <div className="bg-muted/40 rounded-md p-3 sm:p-4 font-mono border border-border/50">
       {hindiSuffix && (
-        <p className="text-[10px] sm:text-xs text-muted-foreground mb-1 font-sans" lang="hi">
+        <p className="text-xs sm:text-sm text-muted-foreground mb-2 font-sans" lang="hi">
           {hindiSuffix}
         </p>
       )}
-      {lines.map((line, i) => {
-        const isActive = line.includes(activeId);
-        return (
-          <div
-            key={i}
-            className={`px-1.5 py-0.5 rounded text-[11px] sm:text-xs leading-relaxed ${
-              isActive
-                ? 'bg-primary/10 border-l-2 border-primary font-semibold'
-                : 'opacity-50'
-            }`}
-          >
-            <HighlightedRules rules={line} />
-          </div>
-        );
-      })}
+      {activeLine && (
+        <div className="px-3 py-2 rounded-md bg-primary/10 border-l-3 border-primary font-bold text-base sm:text-lg leading-relaxed tracking-wide">
+          <HighlightedRules rules={activeLine} />
+        </div>
+      )}
     </div>
   );
 }
