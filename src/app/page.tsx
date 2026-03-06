@@ -283,8 +283,8 @@ Respond with ONLY a valid JSON object (no extra text):
   }, [apiKey, aiProvider, toast]);
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center py-6 sm:py-8 px-4 font-body">
-      <div className="container mx-auto max-w-4xl">
+    <div className="min-h-screen bg-background flex flex-col items-center py-4 sm:py-8 px-1 sm:px-4 font-body">
+      <div className="w-full max-w-4xl mx-auto">
         <header className="mb-5 sm:mb-8">
           {/* Top toolbar: icons in a single responsive row */}
           <div className="flex items-center justify-between mb-3 gap-0.5">
