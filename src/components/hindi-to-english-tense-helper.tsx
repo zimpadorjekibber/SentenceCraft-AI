@@ -374,7 +374,7 @@ Respond with ONLY a valid JSON object:
 
   return (
     <Card className="shadow-lg mt-6 sm:mt-8">
-      <CardHeader>
+      <CardHeader className="px-3 sm:px-6">
         <CardTitle className="text-lg sm:text-xl md:text-2xl font-headline text-primary flex items-center">
           <Languages className="mr-2 h-5 w-5 sm:h-6 sm:w-6" />
           Hindi to English Tense Helper
@@ -383,7 +383,7 @@ Respond with ONLY a valid JSON object:
           Type in English to get Hindi suggestions (e.g., type "main" → मैं). Press <kbd className="px-1 py-0.5 bg-muted rounded text-xs font-mono">Space</kbd> or <kbd className="px-1 py-0.5 bg-muted rounded text-xs font-mono">Enter</kbd> to select. You can also speak in Hindi.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="px-2 sm:px-6 space-y-4">
         {/* Hidden camera file input */}
         <input
           ref={cameraInputRef}

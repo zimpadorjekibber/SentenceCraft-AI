@@ -371,7 +371,7 @@ Respond with ONLY a valid JSON object:
 
   return (
     <Card className="shadow-lg border-primary border-2">
-      <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-2 gap-2">
+      <CardHeader className="px-3 sm:px-6 flex flex-col sm:flex-row items-start sm:items-center justify-between pb-2 gap-2">
         <CardTitle className="text-lg sm:text-xl md:text-2xl font-headline text-primary flex items-center">
           <MessageSquareText className="mr-2 h-5 w-5 sm:h-6 sm:w-6" />
           Generated Sentence
@@ -389,7 +389,7 @@ Respond with ONLY a valid JSON object:
           </Button>
         )}
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="px-2 sm:px-6 space-y-3">
         {isLoading && <div className="h-6 bg-muted rounded w-3/4 mb-2 animate-pulse"></div>}
         {!isLoading && (
           <>

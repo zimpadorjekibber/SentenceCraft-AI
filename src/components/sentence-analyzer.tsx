@@ -370,7 +370,7 @@ export function SentenceAnalyzer({ apiKey, aiProvider, onWordDetailRequest }: Se
   
   return (
     <Card className="shadow-lg mt-6 sm:mt-8">
-      <CardHeader>
+      <CardHeader className="px-3 sm:px-6">
         <CardTitle className="text-lg sm:text-xl md:text-2xl font-headline text-primary flex items-center">
           <ScanText className="mr-2 h-5 w-5 sm:h-6 sm:w-6" />
           Advanced Grammar Lab
@@ -379,7 +379,7 @@ export function SentenceAnalyzer({ apiKey, aiProvider, onWordDetailRequest }: Se
           Explore advanced features like Questions, Modals, Conditionals, and Voice.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="px-2 sm:px-6 space-y-4">
         {/* Hidden camera file input */}
         <input
           ref={cameraInputRef}

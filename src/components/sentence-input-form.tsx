@@ -53,13 +53,13 @@ const inputFields: Array<{
 export function SentenceInputForm({ values, onChange, disabled }: SentenceInputFormProps) {
   return (
     <Card className="shadow-lg">
-      <CardHeader>
+      <CardHeader className="px-3 sm:px-6">
         <CardTitle className="text-lg sm:text-xl md:text-2xl font-headline text-primary flex items-center">
           <WholeWord className="mr-2 h-5 w-5 sm:h-6 sm:w-6" />
           Input Your Words
         </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="px-2 sm:px-6">
         <p className="text-xs text-muted-foreground mb-4 -mt-2">Fields marked with * are required. Optional fields छोड़ सकते हैं।</p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
           {inputFields.map(({ id, label, hindiLabel, description, placeholder, Icon, colorClass }) => (

@@ -586,7 +586,7 @@ Respond with ONLY a valid JSON object:
   // ─── Render ───────────────────────────────────────────────
   return (
     <Card className="shadow-lg">
-      <CardHeader>
+      <CardHeader className="px-3 sm:px-6">
         <CardTitle className="text-lg sm:text-xl md:text-2xl font-headline text-primary flex items-center">
           <BookA className="mr-2 h-5 w-5 sm:h-6 sm:w-6" />
           Dictionary / शब्दकोश
@@ -595,7 +595,7 @@ Respond with ONLY a valid JSON object:
           <span className="font-semibold text-primary">Hindi → English</span> या <span className="font-semibold text-primary">English → Hindi</span> — दोनों काम करता है! Hindi के लिए English में type करें (e.g., &quot;khansi&quot; → खाँसी), <kbd className="px-1 py-0.5 bg-muted rounded text-xs font-mono">Space</kbd> दबाएं। English word सीधा लिखें।
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="px-2 sm:px-6 space-y-4">
         {/* Hidden camera file input */}
         <input
           ref={cameraInputRef}
