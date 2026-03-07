@@ -18,7 +18,7 @@ export interface QuizTopic {
   labelHindi: string;
   labelTibetan?: string;
   questionTypes: QuizQuestionType[];
-  promptTemplate: (difficulty: string, count: number) => string;
+  promptTemplate: (difficulty: string, count: number, nativeLanguage?: string) => string;
 }
 
 export interface QuizCategory {
@@ -37,7 +37,8 @@ function buildBasePrompt(
   difficulty: string,
   count: number,
   questionTypeInstructions: string,
-  extraRules: string = ''
+  extraRules: string = '',
+  nativeLanguage: string = 'hi'
 ): string {
   const difficultyGuide: Record<string, string> = {
     easy: 'Use simple, common vocabulary. Short sentences. Clear, obvious answers.',
@@ -45,7 +46,12 @@ function buildBasePrompt(
     hard: 'Use varied vocabulary. Longer sentences. Tricky distractors that test deep understanding.',
   };
 
-  return `You are an expert English grammar quiz master for Indian students learning English.
+  const isHindi = nativeLanguage !== 'bo';
+  const nativeLang = isHindi ? 'Hindi' : 'Tibetan (བོད་སྐད)';
+  const nativeScript = isHindi ? 'Devanagari' : 'Tibetan script (བོད་ཡིག)';
+  const studentDesc = isHindi ? 'Indian students learning English' : 'Tibetan students learning English';
+
+  return `You are an expert English grammar quiz master for ${studentDesc}.
 
 Generate exactly ${count} quiz questions to test knowledge of "${topicName}".
 Difficulty: ${difficulty} — ${difficultyGuide[difficulty] || difficultyGuide.medium}
@@ -57,16 +63,17 @@ For each question provide:
 - "id": sequential number starting from 1
 - "type": one of the question types listed above
 - "questionText": the question in English
-- "questionHindi": Hindi version/hint of the question (helpful for Indian students)
+- "questionHindi": ${nativeLang} version/hint of the question in ${nativeScript} (helpful for students). MUST be in ${nativeLang}, NOT English.
 - "options": array of exactly 4 choices
 - "correctAnswer": the exact string from options that is correct
 - "explanation": brief English explanation of WHY this is correct
-- "explanationHindi": same explanation in simple Hindi
+- "explanationHindi": same explanation in simple ${nativeLang} using ${nativeScript}. MUST be in ${nativeLang}, NOT English.
 
 IMPORTANT:
 - correctAnswer MUST exactly match one of the options
 - All questions must specifically test "${topicName}" knowledge
-- Include Hindi translations/hints for every question
+- Include ${nativeLang} translations/hints for every question
+- The "questionHindi" and "explanationHindi" fields MUST contain ${nativeLang} text in ${nativeScript}
 ${extraRules}
 
 Respond with ONLY a JSON object: { "questions": [ ... ] }`;
@@ -108,9 +115,9 @@ const tensesCategory: QuizCategory = {
     label: t.label,
     labelHindi: t.labelHindi,
     questionTypes: ['fill_blank', 'identify_tense', 'correct_error', 'translate'] as QuizQuestionType[],
-    promptTemplate: (difficulty: string, count: number) =>
+    promptTemplate: (difficulty: string, count: number, nativeLanguage?: string) =>
       buildBasePrompt(t.label + ' Tense', difficulty, count, tenseQuestionTypes,
-        `- For "identify_tense" type, all 4 options should be different tense names`),
+        `- For "identify_tense" type, all 4 options should be different tense names`, nativeLanguage),
   })),
 };
 
@@ -144,10 +151,10 @@ const modalsCategory: QuizCategory = {
     label: m.label,
     labelHindi: m.labelHindi,
     questionTypes: ['fill_blank', 'identify_modal', 'correct_error', 'translate'] as QuizQuestionType[],
-    promptTemplate: (difficulty: string, count: number) =>
+    promptTemplate: (difficulty: string, count: number, nativeLanguage?: string) =>
       buildBasePrompt(`Modal Verbs: ${m.label}`, difficulty, count, modalQuestionTypes,
         `- Focus specifically on "${m.label}" modal usage
-- For "identify_modal" type, options should explain WHY a particular modal is used (ability, permission, obligation, etc.)`),
+- For "identify_modal" type, options should explain WHY a particular modal is used (ability, permission, obligation, etc.)`, nativeLanguage),
   })),
 };
 
@@ -178,11 +185,11 @@ const voiceCategory: QuizCategory = {
     label: v.label,
     labelHindi: v.labelHindi,
     questionTypes: ['identify_voice', 'transform', 'correct_error', 'fill_blank'] as QuizQuestionType[],
-    promptTemplate: (difficulty: string, count: number) =>
+    promptTemplate: (difficulty: string, count: number, nativeLanguage?: string) =>
       buildBasePrompt(`Active & Passive Voice: ${v.label}`, difficulty, count, voiceQuestionTypes,
         `- Focus on "${v.label}" transformations
 - Include voice changes across different tenses
-- Show the helping verb (be-form) changes clearly in explanations`),
+- Show the helping verb (be-form) changes clearly in explanations`, nativeLanguage),
   })),
 };
 
@@ -213,11 +220,11 @@ const speechCategory: QuizCategory = {
     label: s.label,
     labelHindi: s.labelHindi,
     questionTypes: ['identify_speech', 'transform', 'correct_error', 'fill_blank'] as QuizQuestionType[],
-    promptTemplate: (difficulty: string, count: number) =>
+    promptTemplate: (difficulty: string, count: number, nativeLanguage?: string) =>
       buildBasePrompt(`Direct & Indirect Speech: ${s.label}`, difficulty, count, speechQuestionTypes,
         `- Focus on "${s.label}" conversions
 - Include tense changes (said → had said), pronoun changes, time/place word changes
-- Show reporting verb changes in explanations`),
+- Show reporting verb changes in explanations`, nativeLanguage),
   })),
 };
 
@@ -250,11 +257,11 @@ const whCategory: QuizCategory = {
     label: w.label,
     labelHindi: w.labelHindi,
     questionTypes: ['fill_blank', 'identify_type', 'correct_error', 'translate'] as QuizQuestionType[],
-    promptTemplate: (difficulty: string, count: number) =>
+    promptTemplate: (difficulty: string, count: number, nativeLanguage?: string) =>
       buildBasePrompt(`WH-Questions: ${w.label}`, difficulty, count, whQuestionTypes,
         `- Focus on "${w.label}" question words
 - Test correct word order in questions (auxiliary verb placement)
-- Include questions in different tenses`),
+- Include questions in different tenses`, nativeLanguage),
   })),
 };
 
@@ -286,14 +293,14 @@ const conditionalsCategory: QuizCategory = {
     label: c.label,
     labelHindi: c.labelHindi,
     questionTypes: ['fill_blank', 'identify_type', 'correct_error', 'translate'] as QuizQuestionType[],
-    promptTemplate: (difficulty: string, count: number) =>
+    promptTemplate: (difficulty: string, count: number, nativeLanguage?: string) =>
       buildBasePrompt(`Conditional Sentences: ${c.label}`, difficulty, count, conditionalQuestionTypes,
         `- Focus specifically on "${c.label}" pattern
 - Zero: If + present simple, present simple (facts/truth)
 - First: If + present simple, will + base verb (real possibility)
 - Second: If + past simple, would + base verb (unreal present)
 - Third: If + past perfect, would have + past participle (unreal past)
-- Explain the if-clause and result-clause verb forms clearly`),
+- Explain the if-clause and result-clause verb forms clearly`, nativeLanguage),
   })),
 };
 
@@ -323,12 +330,16 @@ const articlesCategory: QuizCategory = {
     label: a.label,
     labelHindi: a.labelHindi,
     questionTypes: ['fill_blank', 'correct_error', 'identify_type'] as QuizQuestionType[],
-    promptTemplate: (difficulty: string, count: number) =>
-      buildBasePrompt(`Articles: ${a.label}`, difficulty, count, articleQuestionTypes,
+    promptTemplate: (difficulty: string, count: number, nativeLanguage?: string) => {
+      const articleNote = nativeLanguage === 'bo'
+        ? '- Tibetan language does not have articles — explain why they are important in English'
+        : '- Hindi mein articles nahi hote — explain why English mein zaroori hain';
+      return buildBasePrompt(`Articles: ${a.label}`, difficulty, count, articleQuestionTypes,
         `- Focus on "${a.label}" usage rules
 - Include tricky cases: uncountable nouns, proper nouns, unique things, first/second mention
 - "No article" should be an option where appropriate
-- Hindi mein articles nahi hote — explain why English mein zaroori hain`),
+${articleNote}`, nativeLanguage);
+    },
   })),
 };
 
@@ -359,13 +370,17 @@ const prepositionsCategory: QuizCategory = {
     label: p.label,
     labelHindi: p.labelHindi,
     questionTypes: ['fill_blank', 'correct_error', 'translate'] as QuizQuestionType[],
-    promptTemplate: (difficulty: string, count: number) =>
-      buildBasePrompt(`Prepositions: ${p.label}`, difficulty, count, prepositionQuestionTypes,
+    promptTemplate: (difficulty: string, count: number, nativeLanguage?: string) => {
+      const prepNote = nativeLanguage === 'bo'
+        ? '- Tibetan uses postpositions instead of prepositions — explain this difference'
+        : '- Hindi mein ek hi preposition ke liye English mein alag-alag use hota hai — explain this';
+      return buildBasePrompt(`Prepositions: ${p.label}`, difficulty, count, prepositionQuestionTypes,
         `- Focus on "${p.label}" preposition rules
 - Time: in (months/years/seasons), on (days/dates), at (exact time)
 - Place: in (enclosed spaces), on (surfaces), at (specific points)
 - Direction: to (destination), from (origin), into (entering)
-- Hindi mein ek hi preposition ke liye English mein alag-alag use hota hai — explain this`),
+${prepNote}`, nativeLanguage);
+    },
   })),
 };
 
@@ -395,13 +410,13 @@ const conjunctionsCategory: QuizCategory = {
     label: c.label,
     labelHindi: c.labelHindi,
     questionTypes: ['fill_blank', 'correct_error', 'identify_type'] as QuizQuestionType[],
-    promptTemplate: (difficulty: string, count: number) =>
+    promptTemplate: (difficulty: string, count: number, nativeLanguage?: string) =>
       buildBasePrompt(`Conjunctions: ${c.label}`, difficulty, count, conjunctionQuestionTypes,
         `- Focus on "${c.label}" conjunctions
 - Coordinating: FANBOYS (for, and, nor, but, or, yet, so) — join equal clauses
 - Subordinating: because, although, while, if, when, since, until, after, before
 - Correlative: either...or, neither...nor, both...and, not only...but also
-- Explain when to use comma with conjunctions`),
+- Explain when to use comma with conjunctions`, nativeLanguage),
   })),
 };
 
@@ -430,14 +445,18 @@ const svaCategory: QuizCategory = {
     label: s.label,
     labelHindi: s.labelHindi,
     questionTypes: ['fill_blank', 'correct_error', 'identify_type'] as QuizQuestionType[],
-    promptTemplate: (difficulty: string, count: number) =>
-      buildBasePrompt(`Subject-Verb Agreement: ${s.label}`, difficulty, count, svaQuestionTypes,
+    promptTemplate: (difficulty: string, count: number, nativeLanguage?: string) => {
+      const svaNote = nativeLanguage === 'bo'
+        ? '- Tibetan verb agreement works differently from English — highlight this difference'
+        : '- Hindi mein verb subject ke gender se match hota hai, English mein number se — highlight this difference';
+      return buildBasePrompt(`Subject-Verb Agreement: ${s.label}`, difficulty, count, svaQuestionTypes,
         `- Focus on "${s.label}"
 - Basic rules: singular subject → singular verb, plural → plural
 - Tricky cases: collective nouns (team, family), indefinite pronouns (everyone, nobody),
   compound subjects (A and B = plural, A or B = nearest), there is/are,
   each/every = singular, uncountable nouns
-- Hindi mein verb subject ke gender se match hota hai, English mein number se — highlight this difference`),
+${svaNote}`, nativeLanguage);
+    },
   })),
 };
 
@@ -468,13 +487,17 @@ const posCategory: QuizCategory = {
     label: p.label,
     labelHindi: p.labelHindi,
     questionTypes: ['identify_type', 'fill_blank', 'correct_error'] as QuizQuestionType[],
-    promptTemplate: (difficulty: string, count: number) =>
-      buildBasePrompt(`Parts of Speech: ${p.label}`, difficulty, count, posQuestionTypes,
+    promptTemplate: (difficulty: string, count: number, nativeLanguage?: string) => {
+      const posNote = nativeLanguage === 'bo'
+        ? '- Tibetan also has similar categories — draw parallels where possible'
+        : '- Hindi mein bhi same categories hain — draw parallels';
+      return buildBasePrompt(`Parts of Speech: ${p.label}`, difficulty, count, posQuestionTypes,
         `- Focus on "${p.label}"
 - Mark the target word clearly in the question using UPPERCASE or quotes
 - 8 parts of speech: Noun, Pronoun, Verb, Adverb, Adjective, Preposition, Conjunction, Interjection
 - Include words that can be multiple POS depending on context (e.g., "run" can be noun or verb)
-- Hindi mein bhi same categories hain — draw parallels`),
+${posNote}`, nativeLanguage);
+    },
   })),
 };
 
@@ -504,15 +527,19 @@ const punctuationCategory: QuizCategory = {
     label: p.label,
     labelHindi: p.labelHindi,
     questionTypes: ['correct_error', 'fill_blank', 'identify_type'] as QuizQuestionType[],
-    promptTemplate: (difficulty: string, count: number) =>
-      buildBasePrompt(`Punctuation: ${p.label}`, difficulty, count, punctuationQuestionTypes,
+    promptTemplate: (difficulty: string, count: number, nativeLanguage?: string) => {
+      const punctNote = nativeLanguage === 'bo'
+        ? '- Tibetan uses ཚེག (tsheg) and ཤད (shad) as punctuation — explain how English punctuation differs'
+        : '- Hindi mein punctuation rules similar hain but usage thoda different hai';
+      return buildBasePrompt(`Punctuation: ${p.label}`, difficulty, count, punctuationQuestionTypes,
         `- Focus on "${p.label}" rules
 - Comma: lists, compound sentences, introductory phrases, appositives
 - Period: end of sentence, abbreviations
 - Apostrophe: possession (dog's), contractions (don't)
 - Quotation marks: direct speech, titles
 - Also cover: semicolon, colon, question mark, exclamation mark
-- Hindi mein punctuation rules similar hain but usage thoda different hai`),
+${punctNote}`, nativeLanguage);
+    },
   })),
 };
 

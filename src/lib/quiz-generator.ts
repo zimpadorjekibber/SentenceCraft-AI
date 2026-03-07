@@ -12,9 +12,10 @@ export async function generateQuizQuestions(
   aiProvider: AiProvider,
   topic: QuizTopic,
   difficulty: 'easy' | 'medium' | 'hard' = 'medium',
-  count: number = 5
+  count: number = 5,
+  nativeLanguage: string = 'hi'
 ): Promise<QuizQuestion[]> {
-  const prompt = topic.promptTemplate(difficulty, count);
+  const prompt = topic.promptTemplate(difficulty, count, nativeLanguage);
 
   const responseText = await generateAIContentAction(apiKey, aiProvider, prompt);
   const parsed = JSON.parse(responseText);

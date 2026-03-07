@@ -93,7 +93,7 @@ export function PracticeQuiz({ apiKey, aiProvider }: PracticeQuizProps) {
     }
     setQuizState('loading');
     try {
-      const qs = await generateQuizQuestions(apiKey, aiProvider, selectedTopic, difficulty, questionCount);
+      const qs = await generateQuizQuestions(apiKey, aiProvider, selectedTopic, difficulty, questionCount, nativeLanguage);
       if (qs.length === 0) throw new Error('No questions generated');
       setQuestions(qs);
       setCurrentIndex(0);

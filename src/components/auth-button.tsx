@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { signInWithPopup, signOut } from 'firebase/auth';
+import { signInWithPopup, signInWithRedirect, signOut } from 'firebase/auth';
 import { auth, googleProvider, isFirebaseConfigured } from '@/lib/firebase';
 import { useAuth } from '@/context/auth-context';
 import { Button } from './ui/button';
@@ -28,9 +28,24 @@ export function AuthButton({ onOpenProgress, onOpenQuiz }: AuthButtonProps) {
   const handleSignIn = async () => {
     if (!auth) return;
     try {
-      await signInWithPopup(auth, googleProvider);
-    } catch (error) {
-      console.error("Error during sign-in:", error);
+      // Use redirect on mobile (popup often blocked), popup on desktop
+      const isMobile = /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(navigator.userAgent);
+      if (isMobile) {
+        await signInWithRedirect(auth, googleProvider);
+      } else {
+        await signInWithPopup(auth, googleProvider);
+      }
+    } catch (error: any) {
+      // If popup blocked or fails, fallback to redirect
+      if (error?.code === 'auth/popup-blocked' || error?.code === 'auth/popup-closed-by-user' || error?.code === 'auth/cancelled-popup-request') {
+        try {
+          await signInWithRedirect(auth, googleProvider);
+        } catch (redirectError) {
+          console.error("Redirect sign-in error:", redirectError);
+        }
+      } else {
+        console.error("Error during sign-in:", error);
+      }
     }
   };
 
