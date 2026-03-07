@@ -30,6 +30,8 @@ export interface SavedSentence {
   sentenceText: string;
   sentenceTagged: WordPos[];
   hindiTranslation: string | null;
+  nativeTranslation?: string | null;
+  nativeLanguage?: 'hi' | 'bo';
   tense: string | null;
   source: 'generator' | 'analyzer' | 'hindi_helper' | 'dictionary';
   action: string | null;
@@ -44,10 +46,12 @@ export interface QuizQuestion {
     | 'identify_modal' | 'identify_type' | 'correct_error' | 'translate' | 'transform';
   questionText: string;
   questionHindi?: string;
+  questionNative?: string;
   options: string[];
   correctAnswer: string;
   explanation: string;
   explanationHindi?: string;
+  explanationNative?: string;
   userAnswer?: string;
   isCorrect?: boolean;
 }

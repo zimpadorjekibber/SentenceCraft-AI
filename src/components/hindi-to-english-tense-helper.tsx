@@ -18,6 +18,7 @@ import type { AiProvider } from '@/lib/ai-client';
 import { useHindiTransliteration } from '@/hooks/use-hindi-transliteration';
 import { useCameraOcr } from '@/hooks/use-camera-ocr';
 import { useAuth } from '@/context/auth-context';
+import { useNativeLanguage } from '@/context/language-context';
 import { saveSentence, incrementStat, incrementTenseUsage, incrementFeatureUsage, updateStreak } from '@/lib/firestore-service';
 
 interface AnalyzeHindiForEnglishTenseOutput {
@@ -37,6 +38,7 @@ interface HindiToEnglishTenseHelperProps {
 
 export function HindiToEnglishTenseHelper({ apiKey, aiProvider, onWordDetailRequest, onViewDetailedRulesRequest }: HindiToEnglishTenseHelperProps) {
   const { user, refreshStats } = useAuth();
+  const { nativeLanguage, t } = useNativeLanguage();
   const [hindiInput, setHindiInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -61,7 +63,7 @@ export function HindiToEnglishTenseHelper({ apiKey, aiProvider, onWordDetailRequ
     fetchSuggestions,
     applySuggestion,
     clearSuggestions,
-  } = useHindiTransliteration();
+  } = useHindiTransliteration(nativeLanguage);
 
   const { fileInputRef: cameraInputRef, isProcessing: isCameraProcessing, triggerCamera, handleFileSelected: handleCameraFile } = useCameraOcr({
     apiKey,
@@ -71,12 +73,12 @@ export function HindiToEnglishTenseHelper({ apiKey, aiProvider, onWordDetailRequ
       setAnalysisResult(null);
       setError(null);
       clearSuggestions();
-      toast({ title: "Text Extracted!", description: "Image se Hindi text nikaal kar input mein daal diya." });
+      toast({ title: "Text Extracted!", description: t({ hi: "Image se text nikaal kar input mein daal diya.", bo: "པར་རིས་ནས་ཡི་གེ་ལེན་ཟིན།" }) });
     },
     onError: (message) => {
       toast({ title: "OCR Failed", description: message, variant: "destructive" });
     },
-    language: 'hindi',
+    language: nativeLanguage === 'bo' ? 'tibetan' : 'hindi',
   });
 
   const checkApiKey = useCallback(() => {
@@ -95,11 +97,11 @@ export function HindiToEnglishTenseHelper({ apiKey, aiProvider, onWordDetailRequ
       recognitionRef.current = recognition;
       recognition.continuous = false;
       recognition.interimResults = true;
-      recognition.lang = 'hi-IN';
+      recognition.lang = nativeLanguage === 'bo' ? 'bo' : 'hi-IN';
 
       recognition.onstart = () => {
         setIsListening(true);
-        toast({ title: "बोलना शुरू करें..." });
+        toast({ title: nativeLanguage === 'bo' ? "ད་ལྟ་བཤད་རོགས།" : "बोलना शुरू करें..." });
       };
       recognition.onresult = (event: SpeechRecognitionEvent) => {
         let currentTranscript = "";
@@ -238,7 +240,7 @@ export function HindiToEnglishTenseHelper({ apiKey, aiProvider, onWordDetailRequ
     if (isListening) recognitionRef.current?.stop();
     clearSuggestions();
     if (!hindiInput.trim()) {
-      setError("कृपया विश्लेषण के लिए एक हिंदी वाक्य दर्ज करें।");
+      setError(t({ hi: "कृपया विश्लेषण के लिए एक हिंदी वाक्य दर्ज करें।", bo: "ཚིག་གྲུབ་གཅིག་འཇུག་རོགས།" }));
       return;
     }
 
@@ -249,22 +251,30 @@ export function HindiToEnglishTenseHelper({ apiKey, aiProvider, onWordDetailRequ
     setAnalysisResult(null);
     setSpokenResult(null);
 
-    const prompt = `
-        You are an expert English teacher who is fluent in Hindi.
-        Analyze the following Hindi sentence to determine the most appropriate English tense to convey the same meaning.
+    const nativeLangName = nativeLanguage === 'bo' ? 'Tibetan (བོད་སྐད)' : 'Hindi';
+    const cueExamples = nativeLanguage === 'bo'
+      ? '(like བཞིན་ཡོད, ཟིན, འདུག, etc.)'
+      : '(like "रहा था", "चुका है", etc.)';
+    const invalidInputMsg = nativeLanguage === 'bo'
+      ? 'The provided text does not appear to be a valid Tibetan sentence.'
+      : 'The provided text does not appear to be a valid Hindi sentence.';
 
-        Hindi Sentence: "${hindiInput}"
+    const prompt = `
+        You are an expert English teacher who is fluent in ${nativeLangName}.
+        Analyze the following ${nativeLangName} sentence to determine the most appropriate English tense to convey the same meaning.
+
+        ${nativeLangName} Sentence: "${hindiInput}"
 
         Task:
         1. Identify the most suitable English tense (e.g., "Present Perfect", "Past Indefinite").
-        2. Provide a clear, concise reasoning for your choice, referencing cues from the Hindi sentence (like "रहा था", "चुका है", etc.).
-        3. Create a simple, clear example English sentence that uses this tense and reflects the meaning of the Hindi sentence.
+        2. Provide a clear, concise reasoning for your choice, referencing cues from the ${nativeLangName} sentence ${cueExamples}.
+        3. Create a simple, clear example English sentence that uses this tense and reflects the meaning of the ${nativeLangName} sentence.
         4. Break down your example English sentence into an array of objects, each with "word" (string) and "pos" (Part-of-Speech tag string like "Noun", "Verb", "Adjective", "Adverb", "Pronoun", "Preposition", "Conjunction", "Determiner", "Auxiliary", "Punctuation", etc.).
         5. Provide the exact key for the English tense (e.g., "PastPerfect") for rule lookup.
 
         Respond with ONLY a valid JSON object (no extra text):
         { "identifiedEnglishTense": "Present Continuous", "reasoning": "...", "exampleEnglishSentence": [{"word":"He","pos":"Pronoun"},{"word":"is","pos":"Auxiliary"},{"word":"going","pos":"Verb"},{"word":".","pos":"Punctuation"}], "englishTenseRuleKey": "PresentContinuous" }
-        If the input is not valid Hindi, respond with { "error": "The provided text does not appear to be a valid Hindi sentence." }.
+        If the input is not valid ${nativeLangName}, respond with { "error": "${invalidInputMsg}" }.
     `;
 
     try {
@@ -329,6 +339,15 @@ export function HindiToEnglishTenseHelper({ apiKey, aiProvider, onWordDetailRequ
     const sentenceText = analysisResult.exampleEnglishSentence.map(w => w.word).join(' ');
     setIsSpokenLoading(true);
 
+    const spokenNativeLang = nativeLanguage === 'bo' ? 'Tibetan (བོད་སྐད)' : 'Hindi';
+    const spokenNoteInstruction = nativeLanguage === 'bo'
+      ? `Also provide a "spokenNote" explaining 2-3 key differences between the textbook version and the spoken version, in simple Tibetan so Tibetan students understand. Keep it short (2-3 bullet points).`
+      : `Also provide a "spokenNote" explaining 2-3 key differences between the textbook version and the spoken version, in simple Hindi so Indian students understand. Keep it short (2-3 bullet points).
+
+HINDI GRAMMAR RULE FOR PERFECT TENSES:
+- For TRANSITIVE verbs in Perfect tenses: subject MUST use ergative "ने" — मैंने, उसने, हमने, तुमने, उन्होंने. Example: "मैंने क्रिकेट खेला है" (NOT "मैं क्रिकेट खेला है").
+- For INTRANSITIVE verbs: Do NOT use "ने". Subject stays as-is.`;
+
     const prompt = `You are a fluent English speaker who helps students learn real-life conversational English.
 
 The student has learned this textbook sentence:
@@ -342,16 +361,12 @@ Rules:
 - Use common spoken phrases and fillers if they sound natural
 - Shorten or simplify long/formal structures
 - Keep the core meaning the same
-- Also provide a "spokenNote" explaining 2-3 key differences between the textbook version and the spoken version, in simple Hindi so Indian students understand. Keep it short (2-3 bullet points).
-
-HINDI GRAMMAR RULE FOR PERFECT TENSES:
-- For TRANSITIVE verbs in Perfect tenses: subject MUST use ergative "ने" — मैंने, उसने, हमने, तुमने, उन्होंने. Example: "मैंने क्रिकेट खेला है" (NOT "मैं क्रिकेट खेला है").
-- For INTRANSITIVE verbs: Do NOT use "ने". Subject stays as-is.
+- ${spokenNoteInstruction}
 
 Respond with ONLY a valid JSON object:
 {
   "sentence": [ { "word": "...", "pos": "..." }, ... ],
-  "hindiTranslation": "Hindi translation of the spoken sentence",
+  "hindiTranslation": "${spokenNativeLang} translation of the spoken sentence",
   "spokenNote": "• Textbook vs Spoken difference 1\\n• Difference 2\\n• Difference 3"
 }`;
 
@@ -377,10 +392,13 @@ Respond with ONLY a valid JSON object:
       <CardHeader className="px-3 sm:px-6">
         <CardTitle className="text-lg sm:text-xl md:text-2xl font-headline text-primary flex items-center">
           <Languages className="mr-2 h-5 w-5 sm:h-6 sm:w-6" />
-          Hindi to English Tense Helper
+          {t({ hi: 'Hindi to English Tense Helper', bo: 'བོད་ཡིག་ནས་དབྱིན་ཡིག་དུས་རོགས་པ' })}
         </CardTitle>
         <CardDescription className="text-xs sm:text-sm text-muted-foreground pt-1">
-          Type in English to get Hindi suggestions (e.g., type "main" → मैं). Press <kbd className="px-1 py-0.5 bg-muted rounded text-xs font-mono">Space</kbd> or <kbd className="px-1 py-0.5 bg-muted rounded text-xs font-mono">Enter</kbd> to select. You can also speak in Hindi.
+          {t({
+            hi: 'Type in English to get Hindi suggestions (e.g., type "main" → मैं). Press Space or Enter to select. You can also speak in Hindi.',
+            bo: 'བོད་ཡིག་གཏག་པ་དང་ mic བཀོལ་ནས་བོད་ཡིག་འཇུག་ཐུབ། (Tibetan input supported via mic or typing)'
+          })}
         </CardDescription>
       </CardHeader>
       <CardContent className="px-2 sm:px-6 space-y-4">
@@ -525,7 +543,7 @@ Respond with ONLY a valid JSON object:
                     ) : (
                       <MessageCircle className="h-3.5 w-3.5 mr-1.5" />
                     )}
-                    🗣️ Spoken English (बोलचाल)
+                    🗣️ {t({ hi: 'Spoken English (बोलचाल)', bo: 'Spoken English (ཁ་སྐད)' })}
                   </Button>
 
                   {/* Spoken English result */}
@@ -533,7 +551,7 @@ Respond with ONLY a valid JSON object:
                     <div className="space-y-2 p-3 bg-green-50 dark:bg-green-950/30 rounded-md border border-green-200 dark:border-green-800">
                       <div className="inline-flex items-center gap-1 px-2.5 py-1 bg-green-100 dark:bg-green-900/40 rounded-full">
                         <span className="text-xs sm:text-sm font-semibold text-green-700 dark:text-green-400">🗣️ Spoken Version</span>
-                        <span className="text-xs text-green-600/70 dark:text-green-400/70" lang="hi">(बोलचाल)</span>
+                        <span className="text-xs text-green-600/70 dark:text-green-400/70" lang={nativeLanguage === 'bo' ? 'bo' : 'hi'}>{t({ hi: '(बोलचाल)', bo: '(ཁ་སྐད)' })}</span>
                       </div>
                       <InteractiveSentence
                         taggedSentence={spokenResult.sentence}
@@ -541,7 +559,7 @@ Respond with ONLY a valid JSON object:
                         sentenceIdentifier="hindiHelperSpoken"
                       />
                       {spokenResult.hindiTranslation && (
-                        <p className="text-sm text-muted-foreground italic px-1" lang="hi">
+                        <p className="text-sm text-muted-foreground italic px-1" lang={nativeLanguage === 'bo' ? 'bo' : 'hi'}>
                           {spokenResult.hindiTranslation}
                         </p>
                       )}
@@ -549,9 +567,9 @@ Respond with ONLY a valid JSON object:
                         <div className="pt-1">
                           <p className="text-xs sm:text-sm font-semibold text-green-700 dark:text-green-400 flex items-center gap-1.5 mb-1">
                             <MessageCircle className="h-3.5 w-3.5 shrink-0" />
-                            📖 Textbook vs 🗣️ Real Life — क्या बदला?
+                            📖 Textbook vs 🗣️ Real Life — {t({ hi: 'क्या बदला?', bo: 'ཅི་ཞིག་བསྒྱུར་བ?' })}
                           </p>
-                          <div className="text-xs sm:text-sm text-green-800 dark:text-green-300 whitespace-pre-line" lang="hi">
+                          <div className="text-xs sm:text-sm text-green-800 dark:text-green-300 whitespace-pre-line" lang={nativeLanguage === 'bo' ? 'bo' : 'hi'}>
                             {spokenResult.spokenNote}
                           </div>
                         </div>

@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { BookOpenText, Sparkles, Wand2, FlaskConical, AlertCircle, Printer, Settings, KeyRound, BookOpen, Share2, Download, BookA, GraduationCap } from 'lucide-react';
 import Link from 'next/link';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { LanguageSelector } from '@/components/language-selector';
 import { AppQrCode } from '@/components/app-qr-code';
 
 // Component Imports
@@ -25,6 +26,7 @@ import { AuthButton } from '@/components/auth-button';
 import { ProgressDashboard } from '@/components/progress-dashboard';
 import { ApiKeyDialog, type AiProvider } from '@/components/api-key-dialog';
 import { useAuth } from '@/context/auth-context';
+import { useNativeLanguage } from '@/context/language-context';
 import { saveSentence, incrementStat, incrementTenseUsage, updateStreak } from '@/lib/firestore-service';
 
 // AI Server Actions
@@ -51,6 +53,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 
 export default function HomePage() {
   const { user, refreshStats } = useAuth();
+  const { nativeLanguage } = useNativeLanguage();
   const [apiKey, setApiKey] = useState<string | null>(null);
   const [aiProvider, setAiProvider] = useState<AiProvider>('gemini');
   const [showProgressDashboard, setShowProgressDashboard] = useState(false);
@@ -176,12 +179,13 @@ export default function HomePage() {
         ...wordInputs,
         tense: selectedTense,
         apiKey: apiKey,
-        provider: aiProvider
+        provider: aiProvider,
+        nativeLanguage: nativeLanguage
       });
       
       if (result?.sentence?.length) {
         setGeneratedSentence(result.sentence);
-        setSentenceHindiTranslation(result.hindiTranslation || null);
+        setSentenceHindiTranslation(result.nativeTranslation || result.hindiTranslation || null);
         toast({ title: "Sentence Crafted!", description: "AI has successfully generated your sentence." });
 
         // Save to Firestore (fire-and-forget)
@@ -233,7 +237,15 @@ export default function HomePage() {
       return;
     }
 
-    const prompt = `You are an expert English teacher fluent in Hindi. A student clicked on the word "${wordData.word}" (tagged as "${wordData.pos}") in the sentence: "${fullSentenceText || ''}".
+    const nativeLangName = nativeLanguage === 'bo' ? 'Tibetan (བོད་སྐད)' : 'Hindi';
+    const nativeLangInstruction = nativeLanguage === 'bo'
+      ? 'Provide all native language fields in Tibetan (བོད་སྐད) script.'
+      : 'Provide all native language fields in Hindi (Devanagari script).';
+    const nativeExampleHint = nativeLanguage === 'bo' ? 'Tibetan translation' : 'Hindi translation';
+    const nativeDefHint = nativeLanguage === 'bo' ? 'Tibetan definition (བོད་སྐད་ཀྱི་འགྲེལ་བཤད)' : 'Hindi definition (हिंदी में अर्थ - इस वाक्य के संदर्भ में)';
+
+    const prompt = `You are an expert English teacher fluent in ${nativeLangName}. A student clicked on the word "${wordData.word}" (tagged as "${wordData.pos}") in the sentence: "${fullSentenceText || ''}".
+${nativeLangInstruction}
 
 IMPORTANT CONTEXT RULES:
 - You MUST determine the ACTUAL Part of Speech of "${wordData.word}" based on HOW it is USED in THIS SPECIFIC SENTENCE, not just its general dictionary classification.
@@ -246,24 +258,24 @@ Respond with ONLY a valid JSON object (no extra text):
   "word": "${wordData.word}",
   "pos": "The CORRECT Part of Speech for this word IN THIS SENTENCE's context (may differ from '${wordData.pos}' if context demands it)",
   "contextualPos": "The specific contextual role (e.g., Relative Pronoun, Subordinating Conjunction, Demonstrative Pronoun, Linking Verb etc.)",
-  "contextualPosHindi": "Contextual role in Hindi (e.g., सम्बन्धवाचक सर्वनाम, अधीनस्थ समुच्चयबोधक)",
+  "contextualPosHindi": "Contextual role in ${nativeLangName}",
   "sentenceType": "Type of this sentence: Declarative (Statement), Interrogative (Question), Imperative (Command/Request), or Exclamatory",
-  "sentenceTypeHindi": "Sentence type in Hindi (e.g., विधानवाचक वाक्य, प्रश्नवाचक वाक्य, आज्ञावाचक वाक्य, विस्मयादिबोधक वाक्य)",
+  "sentenceTypeHindi": "Sentence type in ${nativeLangName}",
   "subType": "The specific sub-type based on context (e.g., Relative Pronoun, Subordinating Conjunction, Common Noun, Transitive Verb etc.)",
-  "subTypeHindi": "Sub-type in Hindi",
+  "subTypeHindi": "Sub-type in ${nativeLangName}",
   "definition": "Clear English definition of the word AS USED in this specific sentence context",
-  "definitionHindi": "Hindi definition (हिंदी में अर्थ - इस वाक्य के संदर्भ में)",
+  "definitionHindi": "${nativeDefHint}",
   "useCases": ["3-4 rules/use cases explaining when and how to use this word IN THIS specific role, written simply for students"],
   "examples": [
-    {"word": "example word 1", "sentence": "Full example sentence where the word plays the SAME contextual role", "sentenceHindi": "Hindi translation"},
-    {"word": "example word 2", "sentence": "Another example with same role", "sentenceHindi": "Hindi translation"},
-    {"word": "example word 3", "sentence": "Another example", "sentenceHindi": "Hindi translation"},
-    {"word": "example word 4", "sentence": "Another example", "sentenceHindi": "Hindi translation"},
-    {"word": "example word 5", "sentence": "Another example", "sentenceHindi": "Hindi translation"}
+    {"word": "example word 1", "sentence": "Full example sentence where the word plays the SAME contextual role", "sentenceHindi": "${nativeExampleHint}"},
+    {"word": "example word 2", "sentence": "Another example with same role", "sentenceHindi": "${nativeExampleHint}"},
+    {"word": "example word 3", "sentence": "Another example", "sentenceHindi": "${nativeExampleHint}"},
+    {"word": "example word 4", "sentence": "Another example", "sentenceHindi": "${nativeExampleHint}"},
+    {"word": "example word 5", "sentence": "Another example", "sentenceHindi": "${nativeExampleHint}"}
   ],
-  "rules": ["2-3 important grammar rules about this contextual usage in simple language with Hindi cues"],
+  "rules": ["2-3 important grammar rules about this contextual usage in simple language with ${nativeLangName} cues"],
   "dualRoleExplanation": "IMPORTANT: Explain how this word '${wordData.word}' can play multiple roles in different sentences. Give 2-3 examples showing different POS roles. E.g., 'who' as Interrogative Pronoun in questions vs Relative Pronoun (conjunction-like) in complex sentences. This helps students understand the difference.",
-  "dualRoleExplanationHindi": "Hindi explanation of dual/multiple roles (हिंदी में समझाएं कि यह शब्द अलग-अलग वाक्यों में कैसे अलग भूमिका निभाता है)"
+  "dualRoleExplanationHindi": "${nativeLangName} explanation of dual/multiple roles"
 }`;
 
     try {
@@ -307,6 +319,7 @@ Respond with ONLY a valid JSON object (no extra text):
                   <Download className="h-4 w-4 sm:h-5 sm:w-5 text-green-600 dark:text-green-400" />
                 </Button>
               )}
+              <LanguageSelector />
               <ThemeToggle />
               <Button variant="ghost" size="icon" onClick={() => setShowApiKeyDialog(true)} className="h-9 w-9 sm:h-11 sm:w-11">
                 <Settings className="h-4 w-4 sm:h-5 sm:w-5" />

@@ -16,6 +16,7 @@ export interface QuizTopic {
   id: string;
   label: string;
   labelHindi: string;
+  labelTibetan?: string;
   questionTypes: QuizQuestionType[];
   promptTemplate: (difficulty: string, count: number) => string;
 }
@@ -24,6 +25,7 @@ export interface QuizCategory {
   id: string;
   label: string;
   labelHindi: string;
+  labelTibetan?: string;
   icon: string; // lucide icon name
   color: string; // tailwind color class for badge
   topics: QuizTopic[];
@@ -98,6 +100,7 @@ const tensesCategory: QuizCategory = {
   id: 'tenses',
   label: 'Tenses',
   labelHindi: 'काल',
+  labelTibetan: 'དུས',
   icon: 'Clock',
   color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
   topics: TENSE_NAMES.map(t => ({
@@ -133,6 +136,7 @@ const modalsCategory: QuizCategory = {
   id: 'modals',
   label: 'Modals',
   labelHindi: 'सहायक क्रियाएं',
+  labelTibetan: 'རོགས་བྱ་ཚིག',
   icon: 'KeyRound',
   color: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
   topics: MODAL_NAMES.map(m => ({
@@ -166,6 +170,7 @@ const voiceCategory: QuizCategory = {
   id: 'voice',
   label: 'Active & Passive Voice',
   labelHindi: 'वाच्य',
+  labelTibetan: 'སྒྲ',
   icon: 'ArrowLeftRight',
   color: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
   topics: VOICE_TOPICS.map(v => ({
@@ -200,6 +205,7 @@ const speechCategory: QuizCategory = {
   id: 'speech',
   label: 'Direct & Indirect Speech',
   labelHindi: 'कथन',
+  labelTibetan: 'བཤད་སྟངས',
   icon: 'MessageSquareQuote',
   color: 'bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200',
   topics: SPEECH_TOPICS.map(s => ({
@@ -236,6 +242,7 @@ const whCategory: QuizCategory = {
   id: 'wh_questions',
   label: 'WH-Questions',
   labelHindi: 'प्रश्न वाक्य',
+  labelTibetan: 'དྲི་ཚིག',
   icon: 'HelpCircle',
   color: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200',
   topics: WH_TOPICS.map(w => ({
@@ -271,6 +278,7 @@ const conditionalsCategory: QuizCategory = {
   id: 'conditionals',
   label: 'Conditionals',
   labelHindi: 'शर्तसूचक वाक्य',
+  labelTibetan: 'རྐྱེན་ཅན་ཚིག་གྲུབ',
   icon: 'GitBranch',
   color: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200',
   topics: CONDITIONAL_TOPICS.map(c => ({
@@ -307,6 +315,7 @@ const articlesCategory: QuizCategory = {
   id: 'articles',
   label: 'Articles',
   labelHindi: 'उपपद',
+  labelTibetan: 'ཁྱད་ཚིག',
   icon: 'FileText',
   color: 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200',
   topics: ARTICLE_TOPICS.map(a => ({
@@ -342,6 +351,7 @@ const prepositionsCategory: QuizCategory = {
   id: 'prepositions',
   label: 'Prepositions',
   labelHindi: 'संबंधवाचक',
+  labelTibetan: 'སྔོན་ཚིག',
   icon: 'MapPin',
   color: 'bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-200',
   topics: PREPOSITION_TOPICS.map(p => ({
@@ -377,6 +387,7 @@ const conjunctionsCategory: QuizCategory = {
   id: 'conjunctions',
   label: 'Conjunctions',
   labelHindi: 'समुच्चयबोधक',
+  labelTibetan: 'སྦྲེལ་ཚིག',
   icon: 'Link',
   color: 'bg-lime-100 text-lime-800 dark:bg-lime-900 dark:text-lime-200',
   topics: CONJUNCTION_TOPICS.map(c => ({
@@ -411,6 +422,7 @@ const svaCategory: QuizCategory = {
   id: 'subject_verb_agreement',
   label: 'Subject-Verb Agreement',
   labelHindi: 'कर्ता-क्रिया अनुरूपता',
+  labelTibetan: 'བྱེད་པ་པོ་བྱ་ཚིག་མཐུན་པ',
   icon: 'Scale',
   color: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200',
   topics: SVA_TOPICS.map(s => ({
@@ -448,6 +460,7 @@ const posCategory: QuizCategory = {
   id: 'parts_of_speech',
   label: 'Parts of Speech',
   labelHindi: 'शब्द भेद',
+  labelTibetan: 'ཚིག་གི་རིགས',
   icon: 'Layers',
   color: 'bg-violet-100 text-violet-800 dark:bg-violet-900 dark:text-violet-200',
   topics: POS_TOPICS.map(p => ({
@@ -483,6 +496,7 @@ const punctuationCategory: QuizCategory = {
   id: 'punctuation',
   label: 'Punctuation',
   labelHindi: 'विराम चिह्न',
+  labelTibetan: 'ཚེག་ཤད',
   icon: 'PenTool',
   color: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200',
   topics: PUNCTUATION_TOPICS.map(p => ({

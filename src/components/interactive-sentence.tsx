@@ -15,6 +15,8 @@ import {
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import type { WordPos } from '@/types/ai-types';
+import { useNativeLanguage } from '@/context/language-context';
+import { POS_LABELS } from '@/lib/native-labels';
 
 interface InteractiveSentenceProps {
   taggedSentence: WordPos[];
@@ -59,20 +61,7 @@ function getTenseHighlightClass(taggedWord: WordPos): string {
   return "text-foreground";
 }
 
-const POS_HINDI_MAP: Record<string, string> = {
-  Noun: "संज्ञा",
-  Pronoun: "सर्वनाम",
-  Verb: "क्रिया",
-  Adjective: "विशेषण",
-  Adverb: "क्रियाविशेषण",
-  Preposition: "सम्बन्धबोधक",
-  Conjunction: "समुच्चयबोधक",
-  Determiner: "निर्धारक",
-  Interjection: "विस्मयादिबोधक",
-  Subject: "कर्ता",
-  Object: "कर्म",
-  Auxiliary: "सहायक क्रिया",
-};
+// POS labels now come from native-labels.ts via useNativeLanguage()
 
 // Individual word: Tooltip (hover) for POS label + Popover (click) for Vocabulary Details
 function InteractiveWord({
@@ -86,7 +75,9 @@ function InteractiveWord({
   onWordDetailRequest?: (wordData: WordPos, fullSentenceText: string) => void;
   highlightMode?: "pos" | "tense";
 }) {
-  const posLabel = `${taggedWord.pos}${POS_HINDI_MAP[taggedWord.pos] ? ` (${POS_HINDI_MAP[taggedWord.pos]})` : ''}`;
+  const { nativeLanguage } = useNativeLanguage();
+  const nativeLabel = POS_LABELS[taggedWord.pos]?.[nativeLanguage];
+  const posLabel = `${taggedWord.pos}${nativeLabel ? ` (${nativeLabel})` : ''}`;
   const colorClass = highlightMode === "tense"
     ? getTenseHighlightClass(taggedWord)
     : (WordPartOfSpeechColors[taggedWord.pos] || WordPartOfSpeechColors.Unknown);

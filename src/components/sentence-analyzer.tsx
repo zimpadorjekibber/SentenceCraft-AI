@@ -43,6 +43,7 @@ import { generateAIContentAction } from '@/ai/flows/generate-content-action';
 import type { AiProvider } from '@/lib/ai-client';
 import { useCameraOcr } from '@/hooks/use-camera-ocr';
 import { useAuth } from '@/context/auth-context';
+import { useNativeLanguage } from '@/context/language-context';
 import { saveSentence, incrementStat, updateStreak } from '@/lib/firestore-service';
 
 interface SentenceAnalyzerProps {
@@ -51,14 +52,14 @@ interface SentenceAnalyzerProps {
   onWordDetailRequest: (wordData: WordPos, fullSentenceText: string) => void;
 }
 
-const QUESTION_TYPES = [
-  { value: "What", label: "What (क्या)" },
-  { value: "Why", label: "Why (क्यों)" },
-  { value: "When", label: "When (कब)" },
-  { value: "Where", label: "Where (कहाँ)" },
-  { value: "Who", label: "Who (कौन)" },
-  { value: "How", label: "How (कैसे)" },
-  { value: "Yes/No", label: "Yes/No (Is/Are/Do/Does etc.)" }
+const QUESTION_TYPES_DATA = [
+  { value: "What", labelHi: "What (क्या)", labelBo: "What (ཅི)" },
+  { value: "Why", labelHi: "Why (क्यों)", labelBo: "Why (ཅིའི་ཕྱིར)" },
+  { value: "When", labelHi: "When (कब)", labelBo: "When (ནམ)" },
+  { value: "Where", labelHi: "Where (कहाँ)", labelBo: "Where (གང་དུ)" },
+  { value: "Who", labelHi: "Who (कौन)", labelBo: "Who (སུ)" },
+  { value: "How", labelHi: "How (कैसे)", labelBo: "How (ཇི་ལྟར)" },
+  { value: "Yes/No", labelHi: "Yes/No (Is/Are/Do/Does etc.)", labelBo: "Yes/No (Is/Are/Do/Does etc.)" }
 ];
 
 const MODAL_VERBS = [
@@ -85,6 +86,8 @@ function wordPosArrayToString(sentence: WordPos[]): string {
 
 export function SentenceAnalyzer({ apiKey, aiProvider, onWordDetailRequest }: SentenceAnalyzerProps) {
   const { user, refreshStats } = useAuth();
+  const { nativeLanguage, t } = useNativeLanguage();
+  const nativeLangName = nativeLanguage === 'bo' ? 'Tibetan (བོད་སྐད)' : 'Hindi';
   const [inputText, setInputText] = useState('');
   const [analyzedSentence, setAnalyzedSentence] = useState<WordPos[] | null>(null);
   const [analyzedSentenceHindi, setAnalyzedSentenceHindi] = useState<string | null>(null);
@@ -92,7 +95,8 @@ export function SentenceAnalyzer({ apiKey, aiProvider, onWordDetailRequest }: Se
   const [currentAction, setCurrentAction] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   
-  const [selectedQuestionType, setSelectedQuestionType] = useState<string | null>(QUESTION_TYPES[0].value);
+  const [selectedQuestionType, setSelectedQuestionType] = useState<string | null>(QUESTION_TYPES_DATA[0].value);
+  const QUESTION_TYPES = QUESTION_TYPES_DATA.map(q => ({ value: q.value, label: nativeLanguage === 'bo' ? q.labelBo : q.labelHi }));
   const [selectedModalVerbForRewrite, setSelectedModalVerbForRewrite] = useState<string | null>(null);
   const [selectedConditional, setSelectedConditional] = useState<string | null>(CONDITIONALS[0].value);
   
@@ -114,7 +118,7 @@ export function SentenceAnalyzer({ apiKey, aiProvider, onWordDetailRequest }: Se
     onTextExtracted: (text) => {
       setInputText(text);
       resetAllOutputs(false);
-      toast({ title: "Text Extracted!", description: "Image se text nikaal kar input mein daal diya." });
+      toast({ title: "Text Extracted!", description: t({ hi: "Image se text nikaal kar input mein daal diya.", bo: "པར་རིས་ནས་ཡི་གེ་ལེན་ཟིན།" }) });
     },
     onError: (message) => {
       toast({ title: "OCR Failed", description: message, variant: "destructive" });
@@ -152,10 +156,10 @@ export function SentenceAnalyzer({ apiKey, aiProvider, onWordDetailRequest }: Se
       };
       recognition!.onerror = (event: SpeechRecognitionErrorEvent) => {
         const errorMessages: Record<string, string> = {
-          'not-allowed': 'Microphone permission denied। कृपया browser settings में mic allow करें।',
-          'no-speech': 'कोई आवाज़ नहीं सुनाई दी। फिर से बोलें।',
-          'network': 'Network error। Internet connection check करें।',
-          'aborted': 'Speech recognition बंद हो गया।',
+          'not-allowed': t({ hi: 'Microphone permission denied। कृपया browser settings में mic allow करें।', bo: 'Microphone permission denied། Browser settings ནང་ mic allow བྱོས།' }),
+          'no-speech': t({ hi: 'कोई आवाज़ नहीं सुनाई दी। फिर से बोलें।', bo: 'སྒྲ་གང་ཡང་གོ་མ་བྱུང་། ཡང་བསྐྱར་བཤད།' }),
+          'network': t({ hi: 'Network error। Internet connection check करें।', bo: 'Network error། Internet connection ཞིབ་བཤེར་བྱོས།' }),
+          'aborted': t({ hi: 'Speech recognition बंद हो गया।', bo: 'Speech recognition བཀག་ཟིན།' }),
         };
         toast({ title: "Speech Error", description: errorMessages[event.error] || `Error: ${event.error}`, variant: "destructive" });
         setIsListening(false);
@@ -183,8 +187,8 @@ export function SentenceAnalyzer({ apiKey, aiProvider, onWordDetailRequest }: Se
 
       if (permissionBlocked) {
         toast({
-          title: "Microphone Block है",
-          description: "आपने पहले mic Block किया था। Fix करने के लिए: Chrome में address bar के बाईं ओर 🔒 lock icon पर tap करें → Permissions → Microphone → Allow करें → Page reload करें।",
+          title: t({ hi: "Microphone Block है", bo: "Microphone བཀག་ཡོད།" }),
+          description: t({ hi: "आपने पहले mic Block किया था। Fix करने के लिए: Chrome में address bar के बाईं ओर 🔒 lock icon पर tap करें → Permissions → Microphone → Allow करें → Page reload करें।", bo: "སྔོན་མ་ mic བཀག་ཟིན། Fix བྱེད་ཐབས: Chrome ནང་ address bar གྱོན་ཕྱོགས་ 🔒 lock icon tap བྱོས → Permissions → Microphone → Allow → Page reload བྱོས།" }),
           variant: "destructive",
           duration: 10000,
         });
@@ -201,8 +205,8 @@ export function SentenceAnalyzer({ apiKey, aiProvider, onWordDetailRequest }: Se
         toast({
           title: "Microphone Permission Denied",
           description: isBlocked
-            ? "Mic block है। Fix: Chrome address bar में 🔒 lock icon tap करें → Permissions → Microphone → Allow → फिर page reload करें।"
-            : "Microphone access नहीं मिला। कृपया browser settings check करें।",
+            ? t({ hi: "Mic block है। Fix: Chrome address bar में 🔒 lock icon tap करें → Permissions → Microphone → Allow → फिर page reload करें।", bo: "Mic བཀག་ཡོད། Fix: Chrome address bar ནང་ 🔒 lock icon tap བྱོས → Permissions → Microphone → Allow → Page reload བྱོས།" })
+            : t({ hi: "Microphone access नहीं मिला। कृपया browser settings check करें।", bo: "Microphone access ཐོབ་མ་བྱུང་། Browser settings ཞིབ་བཤེར་བྱོས།" }),
           variant: "destructive",
           duration: 10000,
         });
@@ -268,6 +272,8 @@ export function SentenceAnalyzer({ apiKey, aiProvider, onWordDetailRequest }: Se
                 sentenceText: text,
                 sentenceTagged: parsedResult.taggedSentence,
                 hindiTranslation: parsedResult.hindiTranslation || null,
+                nativeTranslation: parsedResult.hindiTranslation || null,
+                nativeLanguage: nativeLanguage,
                 tense: null,
                 source: 'analyzer',
                 action: actionType,
@@ -310,7 +316,7 @@ export function SentenceAnalyzer({ apiKey, aiProvider, onWordDetailRequest }: Se
 
         Task:
         1. Break down into an array of objects, each with "word" (string) and "pos" (Part-of-Speech tag string like "Noun", "Verb", "Adjective", "Adverb", "Pronoun", "Preposition", "Conjunction", "Determiner", "Auxiliary", "Punctuation", etc.). Use the CONTEXTUALLY CORRECT POS.
-        2. Translate into natural Hindi.
+        2. Translate into natural ${nativeLangName}.
         3. Respond with ONLY a valid JSON object (no extra text): { "taggedSentence": [{"word":"The","pos":"Determiner"},{"word":"cat","pos":"Noun"},...], "hindiTranslation": "..." }
     `);
   };
@@ -323,7 +329,7 @@ export function SentenceAnalyzer({ apiKey, aiProvider, onWordDetailRequest }: Se
         1. Generate the question from the given sentence.
         2. Explain the grammar rule for forming this type of question in simple language.
         3. Break down the generated question into an array of objects, each with "word" (string) and "pos" (Part-of-Speech tag string like "Noun", "Verb", "Adjective", "Adverb", "Pronoun", "Preposition", "Conjunction", "Determiner", "Auxiliary", "Punctuation", etc.).
-        4. Translate the generated question into natural Hindi.
+        4. Translate the generated question into natural ${nativeLangName}.
         Respond with ONLY a valid JSON object (no extra text):
         { "generatedQuestion": [{"word":"What","pos":"Pronoun"},{"word":"do","pos":"Auxiliary"},...], "hindiTranslation": "...", "explanation": "..." }
     `);
@@ -341,7 +347,7 @@ export function SentenceAnalyzer({ apiKey, aiProvider, onWordDetailRequest }: Se
         1. Rewrite the sentence correctly using "${selectedModalVerbForRewrite}".
         2. Explain the modal verb usage rule in simple language.
         3. Break down the rewritten sentence into an array of objects, each with "word" (string) and "pos" (Part-of-Speech tag string like "Noun", "Verb", "Adjective", "Adverb", "Pronoun", "Preposition", "Conjunction", "Determiner", "Auxiliary", "Punctuation", etc.).
-        4. Translate the rewritten sentence into natural Hindi.
+        4. Translate the rewritten sentence into natural ${nativeLangName}.
         Respond with ONLY a valid JSON object (no extra text):
         { "rewrittenSentence": [{"word":"He","pos":"Pronoun"},{"word":"can","pos":"Auxiliary"},...], "hindiTranslation": "...", "explanation": "..." }
     `);
@@ -355,7 +361,7 @@ export function SentenceAnalyzer({ apiKey, aiProvider, onWordDetailRequest }: Se
         1. Rewrite the sentence as a ${selectedConditional} conditional.
         2. Explain the conditional rule applied in simple language.
         3. Break down the transformed sentence into an array of objects, each with "word" (string) and "pos" (Part-of-Speech tag string like "Noun", "Verb", "Adjective", "Adverb", "Pronoun", "Preposition", "Conjunction", "Determiner", "Auxiliary", "Punctuation", etc.).
-        4. Translate the transformed sentence into natural Hindi.
+        4. Translate the transformed sentence into natural ${nativeLangName}.
         Respond with ONLY a valid JSON object (no extra text):
         { "transformedSentence": [{"word":"If","pos":"Conjunction"},{"word":"I","pos":"Pronoun"},...], "hindiTranslation": "...", "explanation": "..." }
     `);
@@ -448,16 +454,16 @@ Rules:
 
 Task:
 1. Convert to spoken/conversational English.
-2. Explain 2-3 key differences between textbook and spoken version in simple Hindi so Indian students understand (use bullet points).
+2. Explain 2-3 key differences between textbook and spoken version in simple ${nativeLangName} so students understand (use bullet points).
 3. Break down the spoken sentence into an array of objects with "word" (string) and "pos" (Part-of-Speech tag like "Noun", "Verb", "Adjective", "Adverb", "Pronoun", "Preposition", "Conjunction", "Determiner", "Auxiliary", "Punctuation", etc.).
-4. Translate the spoken sentence into natural Hindi.
+4. Translate the spoken sentence into natural ${nativeLangName}.
 
 Respond with ONLY a valid JSON object:
-{ "rewrittenSentence": [{"word":"I'm","pos":"Pronoun"},{"word":"gonna","pos":"Verb"},...], "hindiTranslation": "...", "explanation": "📖 Textbook vs 🗣️ Real Life — क्या बदला?\\n• Point 1\\n• Point 2\\n• Point 3" }`)}
+{ "rewrittenSentence": [{"word":"I'm","pos":"Pronoun"},{"word":"gonna","pos":"Verb"},...], "hindiTranslation": "...", "explanation": "📖 Textbook vs 🗣️ Real Life — ${nativeLanguage === 'bo' ? 'ཅི་ཞིག་བསྒྱུར་བ' : 'क्या बदला'}?\\n• Point 1\\n• Point 2\\n• Point 3" }`)}
           disabled={isLoading || !inputText.trim()}
           className="w-full bg-green-600 hover:bg-green-700 text-white text-sm font-semibold"
         >
-          {isLoading && currentAction === 'Spoken English' ? <LoadingSpinner inline /> : <><MessageCircle className="mr-2 h-4 w-4" /> 🗣️ Spoken English (बोलचाल में बदलें)</>}
+          {isLoading && currentAction === 'Spoken English' ? <LoadingSpinner inline /> : <><MessageCircle className="mr-2 h-4 w-4" /> 🗣️ Spoken English {t({ hi: '(बोलचाल में बदलें)', bo: '(སྐད་ཆར་བསྒྱུར)' })}</>}
         </Button>
 
         {analyzedSentence && (
@@ -469,8 +475,8 @@ Respond with ONLY a valid JSON object:
               sentenceIdentifier="analyzer"
             />
             {analyzedSentenceHindi && (
-              <p className="text-xs sm:text-sm text-muted-foreground italic pl-1 font-body">
-                Hindi: {analyzedSentenceHindi}
+              <p className="text-xs sm:text-sm text-muted-foreground italic pl-1 font-body" lang={nativeLanguage === 'bo' ? 'bo' : 'hi'}>
+                {t({ hi: 'Hindi', bo: 'བོད་ཡིག' })}: {analyzedSentenceHindi}
               </p>
             )}
             {lastTransformationExplanation && (
@@ -540,7 +546,7 @@ Respond with ONLY a valid JSON object:
             <div className="space-y-2 p-3 border rounded-lg flex flex-col justify-between">
               <h4 className="text-sm font-semibold text-primary flex items-center"><TextCursorInput className="mr-1.5 h-4 w-4 shrink-0" />Punctuate</h4>
               <div className="flex gap-1.5">
-                <Button variant="outline" onClick={() => handleGenericAction("Punctuation", () => `You are an English grammar expert. Add correct punctuation to the following sentence. The sentence may be missing commas, periods, question marks, exclamation marks, apostrophes, quotation marks, colons, semicolons, or capital letters at the start. Sentence: "${inputText}". Task: 1. Add all missing punctuation marks and fix capitalization. 2. Explain what punctuation was added and why, referencing punctuation rules. 3. Break down the punctuated sentence into an array of objects, each with "word" (string) and "pos" (Part-of-Speech tag string like "Noun", "Verb", "Adjective", "Adverb", "Pronoun", "Preposition", "Conjunction", "Determiner", "Auxiliary", "Punctuation", etc.). 4. Translate the punctuated sentence into natural Hindi. Respond with ONLY a valid JSON object (no extra text): { "rewrittenSentence": [{"word":"He","pos":"Pronoun"},{"word":"said","pos":"Verb"},{"word":",","pos":"Punctuation"},{"word":"Hello","pos":"Interjection"},{"word":"!","pos":"Punctuation"}], "hindiTranslation": "...", "explanation": "..." }`)} disabled={isLoading || !inputText.trim()} className="flex-grow text-xs">
+                <Button variant="outline" onClick={() => handleGenericAction("Punctuation", () => `You are an English grammar expert. Add correct punctuation to the following sentence. The sentence may be missing commas, periods, question marks, exclamation marks, apostrophes, quotation marks, colons, semicolons, or capital letters at the start. Sentence: "${inputText}". Task: 1. Add all missing punctuation marks and fix capitalization. 2. Explain what punctuation was added and why, referencing punctuation rules. 3. Break down the punctuated sentence into an array of objects, each with "word" (string) and "pos" (Part-of-Speech tag string like "Noun", "Verb", "Adjective", "Adverb", "Pronoun", "Preposition", "Conjunction", "Determiner", "Auxiliary", "Punctuation", etc.). 4. Translate the punctuated sentence into natural ${nativeLangName}. Respond with ONLY a valid JSON object (no extra text): { "rewrittenSentence": [{"word":"He","pos":"Pronoun"},{"word":"said","pos":"Verb"},{"word":",","pos":"Punctuation"},{"word":"Hello","pos":"Interjection"},{"word":"!","pos":"Punctuation"}], "hindiTranslation": "...", "explanation": "..." }`)} disabled={isLoading || !inputText.trim()} className="flex-grow text-xs">
                   {isLoading && currentAction === 'Punctuation' ? <LoadingSpinner inline /> : "Fix"}
                 </Button>
                 <Button variant="ghost" size="icon" onClick={() => handleFeatureInfoClick("Punctuation")} className="shrink-0"><BookOpenCheck className="h-4 w-4" /></Button>
@@ -550,7 +556,7 @@ Respond with ONLY a valid JSON object:
             <div className="space-y-2 p-3 border rounded-lg flex flex-col justify-between">
               <h4 className="text-sm font-semibold text-primary flex items-center"><Repeat className="mr-1.5 h-4 w-4 shrink-0" />Voice</h4>
               <div className="flex gap-1.5">
-                <Button variant="outline" onClick={() => handleGenericAction("Voice", () => `You are an English grammar expert. Transform the following sentence to the other grammatical voice (active to passive or passive to active). Sentence: "${inputText}". Task: 1. Transform the voice. 2. Explain the rule. 3. Break down into array of objects with "word" (string) and "pos" (string like "Noun","Verb","Auxiliary", etc.). 4. Translate to Hindi. Respond with ONLY valid JSON: { "transformedSentence": [{"word":"The","pos":"Determiner"},...], "hindiTranslation": "...", "explanation": "..." }`)} disabled={isLoading || !inputText.trim()} className="flex-grow text-xs">Swap</Button>
+                <Button variant="outline" onClick={() => handleGenericAction("Voice", () => `You are an English grammar expert. Transform the following sentence to the other grammatical voice (active to passive or passive to active). Sentence: "${inputText}". Task: 1. Transform the voice. 2. Explain the rule. 3. Break down into array of objects with "word" (string) and "pos" (string like "Noun","Verb","Auxiliary", etc.). 4. Translate to ${nativeLangName}. Respond with ONLY valid JSON: { "transformedSentence": [{"word":"The","pos":"Determiner"},...], "hindiTranslation": "...", "explanation": "..." }`)} disabled={isLoading || !inputText.trim()} className="flex-grow text-xs">Swap</Button>
                 <Button variant="ghost" size="icon" onClick={() => handleFeatureInfoClick("Active and Passive Voice")} className="shrink-0"><BookOpenCheck className="h-4 w-4" /></Button>
               </div>
             </div>
@@ -558,7 +564,7 @@ Respond with ONLY a valid JSON object:
             <div className="space-y-2 p-3 border rounded-lg flex flex-col justify-between">
               <h4 className="text-sm font-semibold text-primary flex items-center"><Quote className="mr-1.5 h-4 w-4 shrink-0" />Speech</h4>
               <div className="flex gap-1.5">
-                <Button variant="outline" onClick={() => handleGenericAction("Speech", () => `You are an English grammar expert. Transform the following sentence between direct and indirect (reported) speech. Sentence: "${inputText}". Task: 1. Transform the speech type. 2. Explain the rule. 3. Break down into array of objects with "word" (string) and "pos" (string like "Noun","Verb","Auxiliary", etc.). 4. Translate to Hindi. Respond with ONLY valid JSON: { "transformedSentence": [{"word":"He","pos":"Pronoun"},...], "hindiTranslation": "...", "explanation": "..." }`)} disabled={isLoading || !inputText.trim()} className="flex-grow text-xs">Swap</Button>
+                <Button variant="outline" onClick={() => handleGenericAction("Speech", () => `You are an English grammar expert. Transform the following sentence between direct and indirect (reported) speech. Sentence: "${inputText}". Task: 1. Transform the speech type. 2. Explain the rule. 3. Break down into array of objects with "word" (string) and "pos" (string like "Noun","Verb","Auxiliary", etc.). 4. Translate to ${nativeLangName}. Respond with ONLY valid JSON: { "transformedSentence": [{"word":"He","pos":"Pronoun"},...], "hindiTranslation": "...", "explanation": "..." }`)} disabled={isLoading || !inputText.trim()} className="flex-grow text-xs">Swap</Button>
                 <Button variant="ghost" size="icon" onClick={() => handleFeatureInfoClick("Direct and Indirect Speech")} className="shrink-0"><BookOpenCheck className="h-4 w-4" /></Button>
               </div>
             </div>

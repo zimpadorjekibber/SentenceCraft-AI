@@ -10,7 +10,7 @@ interface UseCameraOcrOptions {
   aiProvider: AiProvider;
   onTextExtracted: (text: string) => void;
   onError: (message: string) => void;
-  language?: 'english' | 'hindi';
+  language?: 'english' | 'hindi' | 'tibetan';
 }
 
 /**
@@ -92,6 +92,8 @@ export function useCameraOcr({
 
       const prompt = language === 'hindi'
         ? 'Extract ALL text from this image exactly as it appears. The text may be in Hindi (Devanagari script) or English or mixed. Return ONLY the extracted text, nothing else. No explanations, no formatting, no quotes — just the raw text.'
+        : language === 'tibetan'
+        ? 'Extract ALL text from this image exactly as it appears. The text may be in Tibetan (བོད་ཡིག script) or English or mixed. Return ONLY the extracted text, nothing else. No explanations, no formatting, no quotes — just the raw text.'
         : 'Extract ALL text from this image exactly as it appears. The text is likely in English. Return ONLY the extracted text, nothing else. No explanations, no formatting, no quotes — just the raw text.';
 
       const extractedText = await generateAIContentAction(apiKey, aiProvider, prompt, base64, mimeType);

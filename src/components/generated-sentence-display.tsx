@@ -12,67 +12,19 @@ import type { AiProvider } from '@/lib/ai-client';
 import { useToast } from '@/hooks/use-toast';
 import { TENSE_RULES } from '@/lib/tense-rules-data';
 import { HighlightedRules } from './highlighted-rules';
-
-// Tense-specific educational tips about time usage (Hindi + English)
-const TENSE_TIME_TIPS: Record<string, { label: string; tip: string; hindiTip: string }> = {
-  "Present Perfect Continuous": {
-    label: "⏱️ Time Reference Required / समय संदर्भ ज़रूरी है",
-    tip: "This tense MUST have a time reference: use 'since' (point in time) or 'for' (duration).",
-    hindiTip: "इस tense में 'since' (समय बिंदु, जैसे: since morning) या 'for' (अवधि, जैसे: for 2 hours) लगाना ज़रूरी है।",
-  },
-  "Past Perfect Continuous": {
-    label: "⏱️ Time Reference Required / समय संदर्भ ज़रूरी है",
-    tip: "This tense MUST have a time reference: use 'since' or 'for' to show duration.",
-    hindiTip: "इस tense में 'since' या 'for' से समय अवधि बतानी ज़रूरी है। जैसे: since childhood, for three years.",
-  },
-  "Future Perfect Continuous": {
-    label: "⏱️ Time Reference Required / समय संदर्भ ज़रूरी है",
-    tip: "This tense MUST have a time duration with a deadline: use 'for...by...'.",
-    hindiTip: "इस tense में 'for...by...' pattern ज़रूरी है। जैसे: for two hours by evening.",
-  },
-  "Present Perfect": {
-    label: "💡 Time Tip / समय सुझाव",
-    tip: "Often uses: since, for, already, just, yet, ever, never.",
-    hindiTip: "अक्सर since, for, already, just, yet, ever, never जैसे शब्दों के साथ आता है।",
-  },
-  "Past Perfect": {
-    label: "💡 Time Tip / समय सुझाव",
-    tip: "Often uses: before, by the time, already, after — to show sequence of past events.",
-    hindiTip: "बीते हुए कामों का क्रम बताने के लिए before, by the time, already, after का उपयोग होता है।",
-  },
-  "Future Perfect": {
-    label: "💡 Time Tip / समय सुझाव",
-    tip: "Often uses: by + time (by tomorrow, by next week) to show a deadline.",
-    hindiTip: "किसी deadline तक काम पूरा होने के लिए 'by' का उपयोग होता है। जैसे: by tomorrow, by next month.",
-  },
-};
+import { useNativeLanguage } from '@/context/language-context';
+import { GRAMMAR_TYPE_LABELS_NATIVE, TENSE_NATIVE_SUFFIXES, TENSE_TIME_TIPS_NATIVE, SPOKEN_LABEL, SPOKEN_DIFF_LABEL } from '@/lib/native-labels';
 
 type GrammarType = 'affirmative' | 'negative' | 'interrogative' | 'negative_interrogative';
 
-const GRAMMAR_TYPE_LABELS: Record<GrammarType, { en: string; hi: string }> = {
-  affirmative:            { en: "Affirmative",        hi: "सकारात्मक" },
-  negative:               { en: "Negative",           hi: "नकारात्मक" },
-  interrogative:          { en: "Interrogative",      hi: "प्रश्नवाचक" },
-  negative_interrogative: { en: "Neg. Interrogative",  hi: "नकारात्मक प्रश्नवाचक" },
+const GRAMMAR_TYPE_EN: Record<GrammarType, string> = {
+  affirmative: "Affirmative",
+  negative: "Negative",
+  interrogative: "Interrogative",
+  negative_interrogative: "Neg. Interrogative",
 };
 
 const ALL_GRAMMAR_TYPES: GrammarType[] = ['affirmative', 'negative', 'interrogative', 'negative_interrogative'];
-
-// Hindi suffix identifiers for each tense (पहचान)
-const TENSE_HINDI_SUFFIXES: Record<string, string> = {
-  "Present Indefinite": "ता है, ती है, ते हैं",
-  "Present Continuous": "रहा है, रही है, रहे हैं, रहा हूँ",
-  "Present Perfect": "चुका है, चुकी है, चुके हैं, या है, यी है, ये हैं",
-  "Present Perfect Continuous": "से रहा है, से रही है, से रहे हैं",
-  "Past Indefinite": "ता था, ती थी, ते थे, या, यी, ये",
-  "Past Continuous": "रहा था, रही थी, रहे थे",
-  "Past Perfect": "चुका था, चुकी थी, चुके थे, या था, यी थी, ये थे",
-  "Past Perfect Continuous": "से रहा था, से रही थी, से रहे थे",
-  "Future Indefinite": "गा, गी, गे",
-  "Future Continuous": "रहा होगा, रही होगी, रहे होंगे",
-  "Future Perfect": "चुका होगा, चुकी होगी, चुके होंगे",
-  "Future Perfect Continuous": "से रहा होगा, से रही होगी, से रहे होंगे",
-};
 
 // Map grammar type to the rule label identifier in the XML markup
 const GRAMMAR_TO_RULE_ID: Record<GrammarType, string> = {
@@ -86,11 +38,11 @@ const GRAMMAR_TO_RULE_ID: Record<GrammarType, string> = {
 function TenseRulesInline({
   rules,
   activeGrammarType,
-  hindiSuffix,
+  nativeSuffix,
 }: {
   rules: string;
   activeGrammarType: GrammarType;
-  hindiSuffix?: string;
+  nativeSuffix?: string;
 }) {
   const lines = rules.split('\n').filter(line => line.trim());
   const activeId = GRAMMAR_TO_RULE_ID[activeGrammarType];
@@ -98,9 +50,9 @@ function TenseRulesInline({
 
   return (
     <div className="bg-muted/40 rounded-md p-3 sm:p-4 font-mono border border-border/50">
-      {hindiSuffix && (
-        <p className="text-xs sm:text-sm text-muted-foreground mb-2 font-sans" lang="hi">
-          {hindiSuffix}
+      {nativeSuffix && (
+        <p className="text-xs sm:text-sm text-muted-foreground mb-2 font-sans">
+          {nativeSuffix}
         </p>
       )}
       {activeLine && (
@@ -147,6 +99,7 @@ export function GeneratedSentenceDisplay({
   const [convertedCache, setConvertedCache] = useState<Record<CacheKey, ConvertedSentence>>({});
   const [isConverting, setIsConverting] = useState(false);
   const { toast } = useToast();
+  const { nativeLanguage, t } = useNativeLanguage();
 
   // Reset when the main sentence changes
   const sentenceText = sentence?.map(w => w.word).join(' ') || '';
@@ -205,7 +158,7 @@ export function GeneratedSentenceDisplay({
   }, [apiKey, aiProvider, convertedCache, toast]);
 
   const buildGrammarPrompt = useCallback((type: GrammarType): string => {
-    const typeLabel = GRAMMAR_TYPE_LABELS[type].en;
+    const typeLabel = GRAMMAR_TYPE_EN[type];
     return `You are an expert English grammar teacher. Convert the following sentence to its ${typeLabel} form.
 Keep the SAME tense${tenseName ? ` ("${tenseName}")` : ''} — only change the sentence type.
 
@@ -232,7 +185,7 @@ Respond with ONLY a valid JSON object:
 
   const buildSpokenPrompt = useCallback((grammarType: GrammarType): string => {
     const sourceText = getGrammarSentenceText(grammarType);
-    const grammarLabel = GRAMMAR_TYPE_LABELS[grammarType].en;
+    const grammarLabel = GRAMMAR_TYPE_EN[grammarType];
     return `You are a fluent English speaker who helps students learn real-life conversational English.
 
 The student has learned this textbook ${grammarLabel} sentence:
@@ -347,7 +300,7 @@ Respond with ONLY a valid JSON object:
     return null;
   }
 
-  const tenseTip = tenseName ? TENSE_TIME_TIPS[tenseName] : null;
+  const tenseTipData = tenseName ? TENSE_TIME_TIPS_NATIVE[tenseName] : null;
 
   // Determine what to display
   const isAffirmative = activeGrammarType === 'affirmative';
@@ -367,7 +320,8 @@ Respond with ONLY a valid JSON object:
   }
 
   const spokenNote = isSpokenMode ? convertedCache[`spoken_${activeGrammarType}`]?.spokenNote : null;
-  const grammarLabel = GRAMMAR_TYPE_LABELS[activeGrammarType];
+  const grammarLabelEn = GRAMMAR_TYPE_EN[activeGrammarType];
+  const grammarLabelNative = GRAMMAR_TYPE_LABELS_NATIVE[activeGrammarType]?.[nativeLanguage] || '';
 
   return (
     <Card className="shadow-lg border-primary border-2">
@@ -396,7 +350,8 @@ Respond with ONLY a valid JSON object:
             {/* Grammar Type Buttons Row */}
             <div className="flex flex-wrap gap-1.5 sm:gap-2">
               {ALL_GRAMMAR_TYPES.map((type) => {
-                const label = GRAMMAR_TYPE_LABELS[type];
+                const labelEn = GRAMMAR_TYPE_EN[type];
+                const labelNative = GRAMMAR_TYPE_LABELS_NATIVE[type]?.[nativeLanguage] || '';
                 const isActive = activeGrammarType === type;
                 return (
                   <Button
@@ -407,8 +362,8 @@ Respond with ONLY a valid JSON object:
                     onClick={() => handleGrammarTypeChange(type)}
                     disabled={isConverting}
                   >
-                    <span>{label.en}</span>
-                    <span className="hidden sm:inline ml-1 opacity-70">({label.hi})</span>
+                    <span>{labelEn}</span>
+                    <span className="hidden sm:inline ml-1 opacity-70">({labelNative})</span>
                   </Button>
                 );
               })}
@@ -427,7 +382,7 @@ Respond with ONLY a valid JSON object:
               >
                 <MessageCircle className="h-3 w-3 sm:h-3.5 sm:w-3.5 mr-1" />
                 <span>🗣️ Spoken</span>
-                <span className="hidden sm:inline ml-1 opacity-70">(बोलचाल)</span>
+                <span className="hidden sm:inline ml-1 opacity-70">({SPOKEN_LABEL[nativeLanguage]})</span>
               </Button>
 
               {isConverting && (
@@ -440,14 +395,14 @@ Respond with ONLY a valid JSON object:
               <div className="flex flex-wrap gap-1.5">
                 {!isAffirmative && (
                   <div className="inline-flex items-center gap-1 px-2.5 py-1 bg-primary/10 rounded-full">
-                    <span className="text-xs sm:text-sm font-semibold text-primary">{grammarLabel.en}</span>
-                    <span className="text-xs text-primary/70" lang="hi">({grammarLabel.hi})</span>
+                    <span className="text-xs sm:text-sm font-semibold text-primary">{grammarLabelEn}</span>
+                    <span className="text-xs text-primary/70">({grammarLabelNative})</span>
                   </div>
                 )}
                 {isSpokenMode && (
                   <div className="inline-flex items-center gap-1 px-2.5 py-1 bg-green-100 dark:bg-green-950/40 rounded-full">
                     <span className="text-xs sm:text-sm font-semibold text-green-700 dark:text-green-400">🗣️ Spoken</span>
-                    <span className="text-xs text-green-600/70 dark:text-green-400/70" lang="hi">(बोलचाल)</span>
+                    <span className="text-xs text-green-600/70 dark:text-green-400/70">({SPOKEN_LABEL[nativeLanguage]})</span>
                   </div>
                 )}
               </div>
@@ -458,7 +413,7 @@ Respond with ONLY a valid JSON object:
               <TenseRulesInline
                 rules={TENSE_RULES[tenseName]}
                 activeGrammarType={activeGrammarType}
-                hindiSuffix={TENSE_HINDI_SUFFIXES[tenseName]}
+                nativeSuffix={TENSE_NATIVE_SUFFIXES[tenseName]?.[nativeLanguage]}
               />
             )}
 
@@ -480,7 +435,7 @@ Respond with ONLY a valid JSON object:
               <div className="p-2.5 sm:p-3 bg-green-50 dark:bg-green-950/30 rounded-md border border-green-200 dark:border-green-800">
                 <p className="text-xs sm:text-sm font-semibold text-green-700 dark:text-green-400 flex items-center gap-1.5 mb-1.5">
                   <MessageCircle className="h-3.5 w-3.5 shrink-0" />
-                  📖 Textbook vs 🗣️ Real Life — क्या बदला?
+                  📖 Textbook vs 🗣️ Real Life — {SPOKEN_DIFF_LABEL[nativeLanguage]}
                 </p>
                 <div className="text-xs sm:text-sm text-green-800 dark:text-green-300 whitespace-pre-line" lang="hi">
                   {spokenNote}
@@ -489,14 +444,14 @@ Respond with ONLY a valid JSON object:
             )}
           </>
         )}
-        {tenseTip && !isLoading && (
+        {tenseTipData && !isLoading && (
           <div className="p-2.5 sm:p-3 bg-amber-50 dark:bg-amber-950/30 rounded-md border border-amber-200 dark:border-amber-800">
             <p className="text-xs sm:text-sm font-semibold text-amber-700 dark:text-amber-400 flex items-center gap-1.5 mb-1">
               <Clock className="h-3.5 w-3.5 shrink-0" />
-              {tenseTip.label}
+              {tenseTipData.label}
             </p>
-            <p className="text-xs sm:text-sm text-amber-900 dark:text-amber-300">{tenseTip.tip}</p>
-            <p className="text-xs sm:text-sm text-amber-700 dark:text-amber-400 mt-0.5" lang="hi">{tenseTip.hindiTip}</p>
+            <p className="text-xs sm:text-sm text-amber-900 dark:text-amber-300">{tenseTipData.tip}</p>
+            <p className="text-xs sm:text-sm text-amber-700 dark:text-amber-400 mt-0.5">{tenseTipData.nativeTip[nativeLanguage]}</p>
           </div>
         )}
       </CardContent>

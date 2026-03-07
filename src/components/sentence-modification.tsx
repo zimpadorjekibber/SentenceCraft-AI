@@ -11,20 +11,22 @@ import { generateAIContentAction } from '@/ai/flows/generate-content-action';
 import type { AiProvider } from '@/lib/ai-client';
 import { useToast } from '@/hooks/use-toast';
 import { InteractiveSentence } from './interactive-sentence';
+import { useNativeLanguage } from '@/context/language-context';
 
 interface SentenceModificationProps {
   apiKey: string | null;
   aiProvider: AiProvider;
   originalSentenceTagged: WordPos[] | null;
-  onSuggestionSelect: (suggestionTagged: WordPos[], hindiTranslation?: string) => void;
+  onSuggestionSelect: (suggestionTagged: WordPos[], nativeTranslation?: string) => void;
   onWordDetailRequest?: (wordData: WordPos, fullSentenceText: string) => void;
 }
 
 export function SentenceModification({ apiKey, aiProvider, originalSentenceTagged, onSuggestionSelect, onWordDetailRequest }: SentenceModificationProps) {
     const [suggestions, setSuggestions] = useState<WordPos[][] | null>(null);
-    const [hindiTranslations, setHindiTranslations] = useState<string[]>([]);
+    const [nativeTranslations, setNativeTranslations] = useState<string[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const { toast } = useToast();
+    const { nativeLanguage, t } = useNativeLanguage();
 
     if (!originalSentenceTagged || originalSentenceTagged.length === 0) {
         return null;
@@ -38,9 +40,15 @@ export function SentenceModification({ apiKey, aiProvider, originalSentenceTagge
 
         setIsLoading(true);
         setSuggestions(null);
-        setHindiTranslations([]);
+        setNativeTranslations([]);
 
         const originalSentenceText = originalSentenceTagged.map(w => w.word).join(' ');
+
+        const translationLang = nativeLanguage === 'bo' ? 'Tibetan (བོད་སྐད)' : 'Hindi';
+        const translationRule = nativeLanguage === 'bo'
+            ? `Provide a natural Tibetan (བོད་སྐད) translation for each alternative sentence using standard Tibetan script.`
+            : `Provide a natural Hindi translation for each alternative sentence.
+            HINDI GRAMMAR RULE FOR PERFECT TENSES: For TRANSITIVE verbs in Perfect tenses, subject MUST use ergative "ने" — मैंने, उसने, हमने, तुमने, उन्होंने. Example: "मैंने क्रिकेट खेला है" (NOT "मैं क्रिकेट खेला है"). For INTRANSITIVE verbs, do NOT use "ने".`;
 
         const prompt = `
             You are an AI language assistant. Your task is to rewrite a sentence in three different ways.
@@ -51,9 +59,8 @@ export function SentenceModification({ apiKey, aiProvider, originalSentenceTagge
             Task:
             1. Generate exactly three alternative versions of the original sentence.
             2. For each new sentence, break it down into an array of objects, where each object has a "word" and a "pos" (Part-of-Speech) tag.
-            3. Also provide a natural Hindi translation for each alternative sentence.
-            HINDI GRAMMAR RULE FOR PERFECT TENSES: For TRANSITIVE verbs in Perfect tenses, subject MUST use ergative "ने" — मैंने, उसने, हमने, तुमने, उन्होंने. Example: "मैंने क्रिकेट खेला है" (NOT "मैं क्रिकेट खेला है"). For INTRANSITIVE verbs, do NOT use "ने".
-            4. Ensure the output is a JSON object with "suggestions" (array of tagged sentences) and "hindiTranslations" (array of Hindi translations, one per suggestion).
+            3. ${translationRule}
+            4. Ensure the output is a JSON object with "suggestions" (array of tagged sentences) and "nativeTranslations" (array of ${translationLang} translations, one per suggestion).
 
             Example Output Structure:
             {
@@ -62,10 +69,10 @@ export function SentenceModification({ apiKey, aiProvider, originalSentenceTagge
                     [ { "word": "The", "pos": "Determiner" }, { "word": "mouse", "pos": "Noun" }, { "word": "was", "pos": "Verb" }, { "word": "chased", "pos": "Verb" }, { "word": "by", "pos": "Preposition" }, { "word": "the", "pos": "Determiner" }, { "word": "cat", "pos": "Noun" }, { "word": ".", "pos": "Punctuation" } ],
                     [ { "word": "The", "pos": "Determiner" }, { "word": "feline", "pos": "Noun" }, { "word": "ran", "pos": "Verb" }, { "word": "after", "pos": "Preposition" }, { "word": "the", "pos": "Determiner" }, { "word": "rodent", "pos": "Noun" }, { "word": ".", "pos": "Punctuation" } ]
                 ],
-                "hindiTranslations": [
-                    "बिल्ली ने चूहे का पीछा किया।",
-                    "चूहे का बिल्ली द्वारा पीछा किया गया।",
-                    "बिल्ली चूहे के पीछे भागी।"
+                "nativeTranslations": [
+                    "Translation 1 in ${translationLang}",
+                    "Translation 2 in ${translationLang}",
+                    "Translation 3 in ${translationLang}"
                 ]
             }
         `;
@@ -76,7 +83,7 @@ export function SentenceModification({ apiKey, aiProvider, originalSentenceTagge
 
             if (parsedResult.suggestions && Array.isArray(parsedResult.suggestions)) {
                 setSuggestions(parsedResult.suggestions);
-                setHindiTranslations(parsedResult.hindiTranslations || []);
+                setNativeTranslations(parsedResult.nativeTranslations || parsedResult.hindiTranslations || []);
             } else {
                 throw new Error("AI response did not contain a 'suggestions' array.");
             }
@@ -112,13 +119,13 @@ export function SentenceModification({ apiKey, aiProvider, originalSentenceTagge
                                         onWordDetailRequest={onWordDetailRequest}
                                         sentenceIdentifier={`sugg-${index}`}
                                     />
-                                    {hindiTranslations[index] && (
-                                        <p className="mt-1.5 text-xs sm:text-sm text-muted-foreground italic px-1" lang="hi">
-                                            {hindiTranslations[index]}
+                                    {nativeTranslations[index] && (
+                                        <p className="mt-1.5 text-xs sm:text-sm text-muted-foreground italic px-1" lang={nativeLanguage === 'bo' ? 'bo' : 'hi'}>
+                                            {nativeTranslations[index]}
                                         </p>
                                     )}
                                 </div>
-                                <Button size="default" variant="outline" onClick={() => onSuggestionSelect(suggestion, hindiTranslations[index])} className="w-full sm:w-auto shrink-0 mt-1 sm:mt-0">
+                                <Button size="default" variant="outline" onClick={() => onSuggestionSelect(suggestion, nativeTranslations[index])} className="w-full sm:w-auto shrink-0 mt-1 sm:mt-0">
                                     <ThumbsUp className="mr-2 h-4 w-4" />
                                     Use this
                                 </Button>

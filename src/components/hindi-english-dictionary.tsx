@@ -20,6 +20,7 @@ import type { AiProvider } from '@/lib/ai-client';
 import { useHindiTransliteration } from '@/hooks/use-hindi-transliteration';
 import { useCameraOcr } from '@/hooks/use-camera-ocr';
 import { useAuth } from '@/context/auth-context';
+import { useNativeLanguage } from '@/context/language-context';
 import { incrementStat, incrementFeatureUsage, updateStreak } from '@/lib/firestore-service';
 
 // ─── Types ────────────────────────────────────────────────────
@@ -85,16 +86,18 @@ interface HindiEnglishDictionaryProps {
 }
 
 // ─── Helpers ──────────────────────────────────────────────────
-/** Returns true if text contains mostly Devanagari (Hindi) characters */
-function isHindiText(text: string): boolean {
+/** Returns true if text contains mostly Devanagari (Hindi) or Tibetan characters */
+function isNativeScriptText(text: string): boolean {
   const devanagariChars = text.match(/[\u0900-\u097F]/g)?.length || 0;
+  const tibetanChars = text.match(/[\u0F00-\u0FFF]/g)?.length || 0;
   const latinChars = text.match(/[a-zA-Z]/g)?.length || 0;
-  return devanagariChars > latinChars;
+  return (devanagariChars + tibetanChars) > latinChars;
 }
 
 // ─── Component ────────────────────────────────────────────────
 export function HindiEnglishDictionary({ apiKey, aiProvider }: HindiEnglishDictionaryProps) {
   const { user, refreshStats } = useAuth();
+  const { nativeLanguage, t } = useNativeLanguage();
   const [inputText, setInputText] = useState('');
   const [searchDirection, setSearchDirection] = useState<'hi2en' | 'en2hi'>('hi2en');
   const [isLoading, setIsLoading] = useState(false);
@@ -135,7 +138,7 @@ export function HindiEnglishDictionary({ apiKey, aiProvider }: HindiEnglishDicti
     fetchSuggestions,
     applySuggestion,
     clearSuggestions,
-  } = useHindiTransliteration();
+  } = useHindiTransliteration(nativeLanguage);
 
   const { fileInputRef: cameraInputRef, isProcessing: isCameraProcessing, triggerCamera, handleFileSelected: handleCameraFile } = useCameraOcr({
     apiKey,
@@ -144,12 +147,12 @@ export function HindiEnglishDictionary({ apiKey, aiProvider }: HindiEnglishDicti
       setInputText(text);
       resetResults();
       clearSuggestions();
-      toast({ title: "Text Extracted!", description: "Image se text nikaal kar input mein daal diya." });
+      toast({ title: "Text Extracted!", description: t({ hi: "Image se text nikaal kar input mein daal diya.", bo: "པར་རིས་ནས་ཡི་གེ་ལེན་ཟིན།" }) });
     },
     onError: (message) => {
       toast({ title: "OCR Failed", description: message, variant: "destructive" });
     },
-    language: 'hindi', // OCR extracts both Hindi and English from images
+    language: nativeLanguage === 'bo' ? 'tibetan' : 'hindi', // OCR extracts native script + English from images
   });
 
   const checkApiKey = useCallback(() => {
@@ -182,11 +185,11 @@ export function HindiEnglishDictionary({ apiKey, aiProvider }: HindiEnglishDicti
       recognitionRef.current = recognition;
       recognition.continuous = false;
       recognition.interimResults = true;
-      recognition.lang = 'hi-IN';
+      recognition.lang = nativeLanguage === 'bo' ? 'bo' : 'hi-IN';
 
       recognition.onstart = () => {
         setIsListening(true);
-        toast({ title: "बोलना शुरू करें..." });
+        toast({ title: nativeLanguage === 'bo' ? "ད་ལྟ་བཤད་རོགས།" : "बोलना शुरू करें..." });
       };
       recognition.onresult = (event: SpeechRecognitionEvent) => {
         let currentTranscript = "";
@@ -318,7 +321,7 @@ export function HindiEnglishDictionary({ apiKey, aiProvider }: HindiEnglishDicti
     if (isListening) recognitionRef.current?.stop();
     clearSuggestions();
     if (!inputText.trim()) {
-      setError("कृपया कोई शब्द टाइप करें (Hindi या English)।");
+      setError(t({ hi: "कृपया कोई शब्द टाइप करें (Hindi या English)।", bo: "ཚིག་གཅིག་འཇུག་རོགས། (བོད་ཡིག་ or English)" }));
       return;
     }
     if (!checkApiKey()) return;
@@ -327,54 +330,61 @@ export function HindiEnglishDictionary({ apiKey, aiProvider }: HindiEnglishDicti
     resetResults();
 
     // Detect language direction
-    const isHindi = isHindiText(inputText.trim());
-    setSearchDirection(isHindi ? 'hi2en' : 'en2hi');
+    const isNativeInput = isNativeScriptText(inputText.trim());
+    setSearchDirection(isNativeInput ? 'hi2en' : 'en2hi');
 
-    const prompt = isHindi
-      ? `You are a Hindi-English dictionary expert. The user typed a Hindi word or phrase.
+    const nativeLangName = nativeLanguage === 'bo' ? 'Tibetan (བོད་སྐད)' : 'Hindi';
+    const nativeScriptName = nativeLanguage === 'bo' ? 'Tibetan script' : 'Devanagari script';
+    const posNativeHint = nativeLanguage === 'bo' ? 'Part of Speech in Tibetan (མིང་ཚིག, བྱ་ཚིག, རྒྱན་ཚིག, etc.)' : 'Part of Speech in Hindi (संज्ञा, क्रिया, विशेषण, क्रियाविशेषण, etc.)';
+    const nativeErrorMsg = nativeLanguage === 'bo'
+      ? 'ཚིག་འདི་ངོས་ཟིན་མ་བྱུང། ཡང་བསྐྱར་ཚིག་ཡག་པོ་གཏག་རོགས།'
+      : 'यह शब्द पहचाना नहीं जा सका। कृपया सही शब्द लिखें।';
 
-Hindi Input: "${inputText}"
+    const prompt = isNativeInput
+      ? `You are a ${nativeLangName}-English dictionary expert. The user typed a ${nativeLangName} word or phrase.
 
-Task: Provide the English meaning of this Hindi word/phrase.
+${nativeLangName} Input: "${inputText}"
+
+Task: Provide the English meaning of this ${nativeLangName} word/phrase.
 
 Respond with ONLY a valid JSON object (no extra text):
 {
-  "hindiWord": "the Hindi word/phrase as given",
+  "hindiWord": "the ${nativeLangName} word/phrase as given",
   "englishMeaning": "primary English meaning/translation",
   "pos": "Part of Speech in English (Noun, Verb, Adjective, Adverb, Preposition, Conjunction, Pronoun, Interjection, Phrase, Idiom)",
-  "posHindi": "Part of Speech in Hindi (संज्ञा, क्रिया, विशेषण, क्रियाविशेषण, etc.)",
+  "posHindi": "${posNativeHint}",
   "pronunciation": "English pronunciation guide (e.g., /kɒf/ for cough)",
   "additionalMeanings": ["other meaning 1", "other meaning 2"],
   "synonyms": ["synonym1", "synonym2", "synonym3"],
   "antonyms": ["antonym1", "antonym2"],
   "examples": [
-    {"english": "Example sentence in English using the word", "hindi": "Same sentence in Hindi"},
-    {"english": "Another example", "hindi": "Hindi translation"},
-    {"english": "Third example", "hindi": "Hindi translation"}
+    {"english": "Example sentence in English using the word", "hindi": "Same sentence in ${nativeLangName}"},
+    {"english": "Another example", "hindi": "${nativeLangName} translation"},
+    {"english": "Third example", "hindi": "${nativeLangName} translation"}
   ]
 }
 
-If the input is not recognizable Hindi, respond with: { "error": "यह शब्द पहचाना नहीं जा सका। कृपया सही शब्द लिखें।" }`
-      : `You are an English-Hindi dictionary expert. The user typed an English word or phrase.
+If the input is not recognizable ${nativeLangName}, respond with: { "error": "${nativeErrorMsg}" }`
+      : `You are an English-${nativeLangName} dictionary expert. The user typed an English word or phrase.
 
 English Input: "${inputText}"
 
-Task: Provide the Hindi meaning of this English word/phrase.
+Task: Provide the ${nativeLangName} meaning of this English word/phrase.
 
 Respond with ONLY a valid JSON object (no extra text):
 {
-  "hindiWord": "Hindi meaning/translation (in Devanagari script)",
+  "hindiWord": "${nativeLangName} meaning/translation (in ${nativeScriptName})",
   "englishMeaning": "the English word/phrase as given",
   "pos": "Part of Speech in English (Noun, Verb, Adjective, Adverb, Preposition, Conjunction, Pronoun, Interjection, Phrase, Idiom)",
-  "posHindi": "Part of Speech in Hindi (संज्ञा, क्रिया, विशेषण, क्रियाविशेषण, etc.)",
+  "posHindi": "${posNativeHint}",
   "pronunciation": "English pronunciation guide with IPA (e.g., /kɒf/ for cough)",
-  "additionalMeanings": ["other Hindi meaning 1", "other Hindi meaning 2"],
+  "additionalMeanings": ["other ${nativeLangName} meaning 1", "other ${nativeLangName} meaning 2"],
   "synonyms": ["English synonym1", "English synonym2", "English synonym3"],
   "antonyms": ["English antonym1", "English antonym2"],
   "examples": [
-    {"english": "Example sentence in English using the word", "hindi": "Same sentence in Hindi"},
-    {"english": "Another example", "hindi": "Hindi translation"},
-    {"english": "Third example", "hindi": "Hindi translation"}
+    {"english": "Example sentence in English using the word", "hindi": "Same sentence in ${nativeLangName}"},
+    {"english": "Another example", "hindi": "${nativeLangName} translation"},
+    {"english": "Third example", "hindi": "${nativeLangName} translation"}
   ]
 }
 
@@ -416,7 +426,8 @@ If the input is not recognizable English, respond with: { "error": "This word co
     setVerbFormsLoading(true);
     setShowVerbForms(true);
 
-    const prompt = `You are an English grammar expert. The English verb is "${result.englishMeaning}" (Hindi: "${result.hindiWord}").
+    const verbLangName = nativeLanguage === 'bo' ? 'Tibetan (བོད་སྐད)' : 'Hindi';
+    const prompt = `You are an English grammar expert. The English verb is "${result.englishMeaning}" (${verbLangName}: "${result.hindiWord}").
 
 Provide ALL 5 forms of this verb.
 
@@ -428,11 +439,11 @@ Respond with ONLY a valid JSON object:
   "presentParticiple": "V4 - Present Participle / V-ing (e.g., running)",
   "thirdPersonSingular": "V5 - Third Person Singular / V-s/es (e.g., runs)",
   "examples": [
-    {"form": "V1", "label": "Base Form", "sentence": "I run every morning.", "sentenceHindi": "मैं हर सुबह दौड़ता हूँ।"},
-    {"form": "V2", "label": "Past Simple", "sentence": "He ran yesterday.", "sentenceHindi": "वह कल दौड़ा।"},
-    {"form": "V3", "label": "Past Participle", "sentence": "She has run 5 kilometers.", "sentenceHindi": "वह 5 किलोमीटर दौड़ चुकी है।"},
-    {"form": "V4", "label": "Present Participle", "sentence": "They are running now.", "sentenceHindi": "वे अभी दौड़ रहे हैं।"},
-    {"form": "V5", "label": "3rd Person Singular", "sentence": "He runs fast.", "sentenceHindi": "वह तेज़ दौड़ता है।"}
+    {"form": "V1", "label": "Base Form", "sentence": "I run every morning.", "sentenceHindi": "${verbLangName} translation of the example sentence"},
+    {"form": "V2", "label": "Past Simple", "sentence": "He ran yesterday.", "sentenceHindi": "${verbLangName} translation"},
+    {"form": "V3", "label": "Past Participle", "sentence": "She has run 5 kilometers.", "sentenceHindi": "${verbLangName} translation"},
+    {"form": "V4", "label": "Present Participle", "sentence": "They are running now.", "sentenceHindi": "${verbLangName} translation"},
+    {"form": "V5", "label": "3rd Person Singular", "sentence": "He runs fast.", "sentenceHindi": "${verbLangName} translation"}
   ]
 }`;
 
@@ -459,7 +470,8 @@ Respond with ONLY a valid JSON object:
     setNounFormsLoading(true);
     setShowNounForms(true);
 
-    const prompt = `You are an English grammar expert. The English noun is "${result.englishMeaning}" (Hindi: "${result.hindiWord}").
+    const nounLangName = nativeLanguage === 'bo' ? 'Tibetan (བོད་སྐད)' : 'Hindi';
+    const prompt = `You are an English grammar expert. The English noun is "${result.englishMeaning}" (${nounLangName}: "${result.hindiWord}").
 
 Provide the singular and plural forms with the rule.
 
@@ -468,11 +480,11 @@ Respond with ONLY a valid JSON object:
   "singular": "singular form (e.g., child)",
   "plural": "plural form (e.g., children)",
   "pluralRule": "Rule for forming the plural in English (e.g., Irregular plural - changes completely)",
-  "pluralRuleHindi": "Same rule in Hindi (e.g., अनियमित बहुवचन - पूरा शब्द बदल जाता है)",
+  "pluralRuleHindi": "Same rule in ${nounLangName}",
   "singularExample": "A child is playing in the park.",
-  "singularExampleHindi": "एक बच्चा पार्क में खेल रहा है।",
+  "singularExampleHindi": "${nounLangName} translation of the singular example",
   "pluralExample": "The children are playing in the park.",
-  "pluralExampleHindi": "बच्चे पार्क में खेल रहे हैं।"
+  "pluralExampleHindi": "${nounLangName} translation of the plural example"
 }`;
 
     try {
@@ -498,19 +510,20 @@ Respond with ONLY a valid JSON object:
     setNounGenderLoading(true);
     setShowNounGender(true);
 
-    const prompt = `You are an English grammar expert. The English noun is "${result.englishMeaning}" (Hindi: "${result.hindiWord}").
+    const genderLangName = nativeLanguage === 'bo' ? 'Tibetan (བོད་སྐད)' : 'Hindi';
+    const prompt = `You are an English grammar expert. The English noun is "${result.englishMeaning}" (${genderLangName}: "${result.hindiWord}").
 
 Determine the grammatical gender and countability of this noun.
 
 Respond with ONLY a valid JSON object:
 {
   "gender": "Masculine / Feminine / Neuter / Common (most English nouns are Common or Neuter)",
-  "genderHindi": "पुल्लिंग / स्त्रीलिंग / नपुंसकलिंग / उभयलिंग",
-  "explanation": "Explain the gender classification in English (e.g., 'In English, most nouns are common gender. However in Hindi, this noun is masculine/feminine because...')",
-  "explanationHindi": "Hindi में gender की व्याख्या करें",
+  "genderHindi": "Gender in ${genderLangName}",
+  "explanation": "Explain the gender classification in English with ${genderLangName} comparison",
+  "explanationHindi": "Gender explanation in ${genderLangName}",
   "countability": "Countable / Uncountable",
-  "countabilityHindi": "गणनीय / अगणनीय",
-  "countabilityExplanation": "Explain why it is countable or uncountable, and how to use it with articles (a/an/the) or without. Include Hindi comparison."
+  "countabilityHindi": "Countability in ${genderLangName}",
+  "countabilityExplanation": "Explain why it is countable or uncountable, and how to use it with articles (a/an/the) or without. Include ${genderLangName} comparison."
 }`;
 
     try {
@@ -536,7 +549,8 @@ Respond with ONLY a valid JSON object:
     setAdjDegreesLoading(true);
     setShowAdjDegrees(true);
 
-    const prompt = `You are an English grammar expert. The English adjective is "${result.englishMeaning}" (Hindi: "${result.hindiWord}").
+    const adjLangName = nativeLanguage === 'bo' ? 'Tibetan (བོད་སྐད)' : 'Hindi';
+    const prompt = `You are an English grammar expert. The English adjective is "${result.englishMeaning}" (${adjLangName}: "${result.hindiWord}").
 
 Provide the three degrees of comparison for this adjective.
 
@@ -546,13 +560,13 @@ Respond with ONLY a valid JSON object:
   "comparative": "Comparative degree (e.g., more beautiful)",
   "superlative": "Superlative degree (e.g., most beautiful)",
   "rule": "Rule for forming comparative and superlative (e.g., For long adjectives, add 'more' for comparative and 'most' for superlative)",
-  "ruleHindi": "Same rule in Hindi",
+  "ruleHindi": "Same rule in ${adjLangName}",
   "positiveExample": "She is beautiful.",
-  "positiveExampleHindi": "वह सुंदर है।",
+  "positiveExampleHindi": "${adjLangName} translation",
   "comparativeExample": "She is more beautiful than her sister.",
-  "comparativeExampleHindi": "वह अपनी बहन से ज़्यादा सुंदर है।",
+  "comparativeExampleHindi": "${adjLangName} translation",
   "superlativeExample": "She is the most beautiful girl in the class.",
-  "superlativeExampleHindi": "वह कक्षा की सबसे सुंदर लड़की है।"
+  "superlativeExampleHindi": "${adjLangName} translation"
 }`;
 
     try {
@@ -589,10 +603,13 @@ Respond with ONLY a valid JSON object:
       <CardHeader className="px-3 sm:px-6">
         <CardTitle className="text-lg sm:text-xl md:text-2xl font-headline text-primary flex items-center">
           <BookA className="mr-2 h-5 w-5 sm:h-6 sm:w-6" />
-          Dictionary / शब्दकोश
+          {t({ hi: 'Dictionary / शब्दकोश', bo: 'Dictionary / ཚིག་མཛོད' })}
         </CardTitle>
         <CardDescription className="text-xs sm:text-sm text-muted-foreground pt-1">
-          <span className="font-semibold text-primary">Hindi → English</span> या <span className="font-semibold text-primary">English → Hindi</span> — दोनों काम करता है! Hindi के लिए English में type करें (e.g., &quot;khansi&quot; → खाँसी), <kbd className="px-1 py-0.5 bg-muted rounded text-xs font-mono">Space</kbd> दबाएं। English word सीधा लिखें।
+          {t({
+            hi: 'Hindi → English या English → Hindi — दोनों काम करता है! Hindi ke liye English mein type karein, Space dabayein.',
+            bo: 'བོད་ཡིག → English ཡང་ན English → བོད་ཡིག — གཉིས་ཀ་བཀོལ་ཐུབ! བོད་ཡིག་གཏག་པ་དང་ mic བཀོལ་ཐུབ།'
+          })}
         </CardDescription>
       </CardHeader>
       <CardContent className="px-2 sm:px-6 space-y-4">
@@ -725,7 +742,7 @@ Respond with ONLY a valid JSON object:
               {/* Additional Meanings */}
               {result.additionalMeanings?.length > 0 && (
                 <div>
-                  <h4 className="text-xs font-semibold text-muted-foreground mb-1">{searchDirection === 'hi2en' ? 'Other English Meanings' : 'Other Hindi Meanings'} / अन्य अर्थ:</h4>
+                  <h4 className="text-xs font-semibold text-muted-foreground mb-1">{searchDirection === 'hi2en' ? 'Other English Meanings' : t({ hi: 'Other Hindi Meanings', bo: 'Other Tibetan Meanings' })} / {t({ hi: 'अन्य अर्थ', bo: 'གོ་དོན་གཞན' })}:</h4>
                   <div className="flex flex-wrap gap-1.5">
                     {result.additionalMeanings.map((m, i) => (
                       <Badge key={i} variant="outline" className="text-xs">{m}</Badge>
@@ -738,7 +755,7 @@ Respond with ONLY a valid JSON object:
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {result.synonyms?.length > 0 && (
                   <div className="p-2.5 bg-green-50 dark:bg-green-950/30 rounded-md border border-green-200 dark:border-green-800">
-                    <h4 className="text-xs font-semibold text-green-700 dark:text-green-400 mb-1">Synonyms / समानार्थी:</h4>
+                    <h4 className="text-xs font-semibold text-green-700 dark:text-green-400 mb-1">Synonyms / {t({ hi: 'समानार्थी', bo: 'དོན་འདྲ' })}:</h4>
                     <div className="flex flex-wrap gap-1">
                       {result.synonyms.map((s, i) => (
                         <Badge key={i} variant="secondary" className="text-xs bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300">{s}</Badge>
@@ -748,7 +765,7 @@ Respond with ONLY a valid JSON object:
                 )}
                 {result.antonyms?.length > 0 && (
                   <div className="p-2.5 bg-red-50 dark:bg-red-950/30 rounded-md border border-red-200 dark:border-red-800">
-                    <h4 className="text-xs font-semibold text-red-700 dark:text-red-400 mb-1">Antonyms / विलोम:</h4>
+                    <h4 className="text-xs font-semibold text-red-700 dark:text-red-400 mb-1">Antonyms / {t({ hi: 'विलोम', bo: 'དོན་ལྡོག' })}:</h4>
                     <div className="flex flex-wrap gap-1">
                       {result.antonyms.map((a, i) => (
                         <Badge key={i} variant="secondary" className="text-xs bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-300">{a}</Badge>
@@ -761,7 +778,7 @@ Respond with ONLY a valid JSON object:
               {/* Example Sentences */}
               {result.examples?.length > 0 && (
                 <div>
-                  <h4 className="text-xs font-semibold text-muted-foreground mb-2">Example Sentences / उदाहरण:</h4>
+                  <h4 className="text-xs font-semibold text-muted-foreground mb-2">Example Sentences / {t({ hi: 'उदाहरण', bo: 'དཔེར་བརྗོད' })}:</h4>
                   <div className="space-y-2">
                     {result.examples.map((ex, i) => (
                       <div key={i} className="p-2.5 bg-muted/30 rounded-md border text-sm">
@@ -776,7 +793,7 @@ Respond with ONLY a valid JSON object:
               {/* ─── POS-Conditional Feature Buttons ───────────── */}
               {(isVerb || isNoun || isAdjective) && (
                 <div className="pt-2 border-t space-y-2">
-                  <h4 className="text-xs font-semibold text-muted-foreground">Learn More / और सीखें:</h4>
+                  <h4 className="text-xs font-semibold text-muted-foreground">Learn More / {t({ hi: 'और सीखें', bo: 'ད་དུང་སྦྱོང' })}:</h4>
                   <div className="flex flex-wrap gap-2">
                     {isVerb && (
                       <Button
@@ -843,7 +860,7 @@ Respond with ONLY a valid JSON object:
                     <Card className="border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20">
                       <CardContent className="pt-4 space-y-3">
                         <h4 className="font-semibold text-blue-700 dark:text-blue-400 text-sm flex items-center">
-                          <ArrowRightLeft className="mr-1.5 h-4 w-4" /> Verb Forms / क्रिया रूप
+                          <ArrowRightLeft className="mr-1.5 h-4 w-4" /> Verb Forms / {t({ hi: 'क्रिया रूप', bo: 'བྱ་ཚིག་གི་རྣམ་པ' })}
                         </h4>
                         {/* Forms Table */}
                         <div className="overflow-x-auto">
@@ -881,7 +898,7 @@ Respond with ONLY a valid JSON object:
                         {/* Examples */}
                         {verbForms.examples?.length > 0 && (
                           <div className="space-y-1.5 pt-1">
-                            <h5 className="text-xs font-semibold text-muted-foreground">Examples / उदाहरण:</h5>
+                            <h5 className="text-xs font-semibold text-muted-foreground">Examples / {t({ hi: 'उदाहरण', bo: 'དཔེར་བརྗོད' })}:</h5>
                             {verbForms.examples.map((ex, i) => (
                               <div key={i} className="p-2 bg-background rounded-md border text-xs">
                                 <span className="font-bold text-blue-600 dark:text-blue-400">{ex.form}</span>
@@ -907,20 +924,20 @@ Respond with ONLY a valid JSON object:
                     <Card className="border-purple-200 dark:border-purple-800 bg-purple-50/50 dark:bg-purple-950/20">
                       <CardContent className="pt-4 space-y-3">
                         <h4 className="font-semibold text-purple-700 dark:text-purple-400 text-sm flex items-center">
-                          <Users className="mr-1.5 h-4 w-4" /> Singular & Plural / एकवचन और बहुवचन
+                          <Users className="mr-1.5 h-4 w-4" /> Singular & Plural / {t({ hi: 'एकवचन और बहुवचन', bo: 'གཅིག་ཚིག་དང་མང་ཚིག' })}
                         </h4>
                         <div className="grid grid-cols-2 gap-3">
                           <div className="p-3 bg-background rounded-md border text-center">
-                            <p className="text-xs text-muted-foreground mb-1">Singular / एकवचन</p>
+                            <p className="text-xs text-muted-foreground mb-1">Singular / {t({ hi: 'एकवचन', bo: 'གཅིག་ཚིག' })}</p>
                             <p className="text-lg font-bold text-purple-700 dark:text-purple-400">{nounForms.singular}</p>
                           </div>
                           <div className="p-3 bg-background rounded-md border text-center">
-                            <p className="text-xs text-muted-foreground mb-1">Plural / बहुवचन</p>
+                            <p className="text-xs text-muted-foreground mb-1">Plural / {t({ hi: 'बहुवचन', bo: 'མང་ཚིག' })}</p>
                             <p className="text-lg font-bold text-purple-700 dark:text-purple-400">{nounForms.plural}</p>
                           </div>
                         </div>
                         <div className="p-2.5 bg-purple-100/50 dark:bg-purple-900/30 rounded-md border border-purple-200 dark:border-purple-800">
-                          <p className="text-xs font-semibold text-purple-700 dark:text-purple-400 mb-0.5">Rule / नियम:</p>
+                          <p className="text-xs font-semibold text-purple-700 dark:text-purple-400 mb-0.5">Rule / {t({ hi: 'नियम', bo: 'སྒྲིག་གཞི' })}:</p>
                           <p className="text-xs text-foreground">{nounForms.pluralRule}</p>
                           <p className="text-xs text-muted-foreground italic">{nounForms.pluralRuleHindi}</p>
                         </div>
@@ -951,11 +968,11 @@ Respond with ONLY a valid JSON object:
                     <Card className="border-pink-200 dark:border-pink-800 bg-pink-50/50 dark:bg-pink-950/20">
                       <CardContent className="pt-4 space-y-3">
                         <h4 className="font-semibold text-pink-700 dark:text-pink-400 text-sm flex items-center">
-                          <VenetianMask className="mr-1.5 h-4 w-4" /> Gender & Countability / लिंग और गणनीयता
+                          <VenetianMask className="mr-1.5 h-4 w-4" /> Gender & Countability / {t({ hi: 'लिंग और गणनीयता', bo: 'ཕོ་མོ་དང་གྲངས་ཐུབ' })}
                         </h4>
                         <div className="grid grid-cols-2 gap-3">
                           <div className="p-3 bg-background rounded-md border text-center">
-                            <p className="text-xs text-muted-foreground mb-1">Gender / लिंग</p>
+                            <p className="text-xs text-muted-foreground mb-1">Gender / {t({ hi: 'लिंग', bo: 'ཕོ་མོ' })}</p>
                             <p className="text-lg font-bold text-pink-700 dark:text-pink-400">{nounGender.gender}</p>
                             <p className="text-xs text-muted-foreground">{nounGender.genderHindi}</p>
                           </div>
@@ -966,7 +983,7 @@ Respond with ONLY a valid JSON object:
                           </div>
                         </div>
                         <div className="p-2.5 bg-pink-100/50 dark:bg-pink-900/30 rounded-md border border-pink-200 dark:border-pink-800 space-y-1">
-                          <p className="text-xs font-semibold text-pink-700 dark:text-pink-400">Explanation / व्याख्या:</p>
+                          <p className="text-xs font-semibold text-pink-700 dark:text-pink-400">Explanation / {t({ hi: 'व्याख्या', bo: 'འགྲེལ་བཤད' })}:</p>
                           <p className="text-xs text-foreground">{nounGender.explanation}</p>
                           <p className="text-xs text-muted-foreground italic">{nounGender.explanationHindi}</p>
                         </div>
@@ -991,24 +1008,24 @@ Respond with ONLY a valid JSON object:
                     <Card className="border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20">
                       <CardContent className="pt-4 space-y-3">
                         <h4 className="font-semibold text-amber-700 dark:text-amber-400 text-sm flex items-center">
-                          <GraduationCap className="mr-1.5 h-4 w-4" /> Degrees of Adjective / विशेषण की अवस्थाएं
+                          <GraduationCap className="mr-1.5 h-4 w-4" /> Degrees of Adjective / {t({ hi: 'विशेषण की अवस्थाएं', bo: 'རྒྱན་ཚིག་གི་ཚད་གནས' })}
                         </h4>
                         <div className="grid grid-cols-3 gap-2">
                           <div className="p-2.5 bg-background rounded-md border text-center">
-                            <p className="text-[10px] text-muted-foreground mb-1">Positive / मूलावस्था</p>
+                            <p className="text-[10px] text-muted-foreground mb-1">Positive / {t({ hi: 'मूलावस्था', bo: 'གཞི་རིམ' })}</p>
                             <p className="text-sm sm:text-base font-bold text-amber-700 dark:text-amber-400">{adjDegrees.positive}</p>
                           </div>
                           <div className="p-2.5 bg-background rounded-md border text-center">
-                            <p className="text-[10px] text-muted-foreground mb-1">Comparative / उत्तरावस्था</p>
+                            <p className="text-[10px] text-muted-foreground mb-1">Comparative / {t({ hi: 'उत्तरावस्था', bo: 'ཆེས་ཆེ' })}</p>
                             <p className="text-sm sm:text-base font-bold text-amber-700 dark:text-amber-400">{adjDegrees.comparative}</p>
                           </div>
                           <div className="p-2.5 bg-background rounded-md border text-center">
-                            <p className="text-[10px] text-muted-foreground mb-1">Superlative / उत्तमावस्था</p>
+                            <p className="text-[10px] text-muted-foreground mb-1">Superlative / {t({ hi: 'उत्तमावस्था', bo: 'མཆོག་ཏུ་ཆེ' })}</p>
                             <p className="text-sm sm:text-base font-bold text-amber-700 dark:text-amber-400">{adjDegrees.superlative}</p>
                           </div>
                         </div>
                         <div className="p-2.5 bg-amber-100/50 dark:bg-amber-900/30 rounded-md border border-amber-200 dark:border-amber-800">
-                          <p className="text-xs font-semibold text-amber-700 dark:text-amber-400 mb-0.5">Rule / नियम:</p>
+                          <p className="text-xs font-semibold text-amber-700 dark:text-amber-400 mb-0.5">Rule / {t({ hi: 'नियम', bo: 'སྒྲིག་གཞི' })}:</p>
                           <p className="text-xs text-foreground">{adjDegrees.rule}</p>
                           <p className="text-xs text-muted-foreground italic">{adjDegrees.ruleHindi}</p>
                         </div>

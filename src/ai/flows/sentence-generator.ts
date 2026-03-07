@@ -18,6 +18,7 @@ const WordPosSchema = z.object({
 const SentenceOutputSchema = z.object({
   sentence: z.array(WordPosSchema),
   hindiTranslation: z.string().describe('Natural Hindi translation of the complete sentence'),
+  nativeTranslation: z.string().optional().describe('Translation in the selected native language (Hindi or Tibetan)'),
 });
 
 const SentenceInputSchema = z.object({
@@ -34,6 +35,7 @@ const SentenceInputSchema = z.object({
   otherWords: z.string().optional(),
   apiKey: z.string(),
   provider: z.enum(['gemini', 'groq']).optional(),
+  nativeLanguage: z.enum(['hi', 'bo']).optional(),
 });
 
 export type SentenceInput = z.infer<typeof SentenceInputSchema>;
@@ -80,8 +82,10 @@ function buildPrompt(input: SentenceInput): string {
   const timeInstruction = TENSE_TIME_INSTRUCTIONS[input.tense] || '';
 
   const isPerfectTense = input.tense.includes('Perfect') && !input.tense.includes('Continuous');
+  const lang = input.nativeLanguage || 'hi';
+  const isHindi = lang === 'hi';
 
-  const hindiRules = isPerfectTense ? `
+  const hindiRules = (isPerfectTense && isHindi) ? `
 CRITICAL HINDI TRANSLATION RULE (MUST FOLLOW):
 For Perfect tenses with TRANSITIVE verbs (खेलना, खाना, पढ़ना, लिखना, करना, देखना, बनाना, etc.):
 - Subject MUST take "ने": मैंने (NOT मैं), उसने (NOT वह), हमने (NOT हम), तुमने (NOT तुम), उन्होंने (NOT वे), आपने (NOT आप)
@@ -93,6 +97,15 @@ For Perfect tenses with TRANSITIVE verbs (खेलना, खाना, पढ�
 For INTRANSITIVE verbs (जाना, आना, सोना, रोना): Do NOT use "ने", keep subject as-is.
 - CORRECT: "He has gone" = "वह गया है" (NOT "उसने गया है")
 ` : '';
+
+  const translationLang = isHindi ? 'Hindi' : 'Tibetan (བོད་སྐད)';
+  const translationInstruction = isHindi
+    ? `6. Provide a grammatically correct Hindi translation of the sentence (without parentheses — the Hindi should be a normal complete sentence).`
+    : `6. Provide a grammatically correct Tibetan (བོད་སྐད) translation of the sentence using standard Tibetan script (without parentheses — the translation should be a normal complete sentence).`;
+
+  const selfCheckInstruction = isHindi
+    ? `7. SELF-CHECK before responding: (a) Is the English verb form correct for "${input.tense}"? (b) Does the Hindi use "ने" correctly for transitive verbs in Perfect tenses? (c) Are optional time words wrapped in parentheses?`
+    : `7. SELF-CHECK before responding: (a) Is the English verb form correct for "${input.tense}"? (b) Is the Tibetan translation natural and grammatically correct? (c) Are optional time words wrapped in parentheses?`;
 
   return `You are an expert English grammar teacher. You must be VERY STRICT about tense accuracy.
 Generate a natural, grammatically correct English sentence in the "${input.tense}" tense.
@@ -123,10 +136,10 @@ Instructions:
    [..., {"word":"since","pos":"Preposition"}, {"word":"(","pos":"Punctuation"}, {"word":"morning","pos":"Noun"}, {"word":")","pos":"Punctuation"}, ...]
    Example: "I have (already) played cricket" becomes:
    [..., {"word":"have","pos":"Verb"}, {"word":"(","pos":"Punctuation"}, {"word":"already","pos":"Adverb"}, {"word":")","pos":"Punctuation"}, {"word":"played","pos":"Verb"}, ...]
-6. Provide a grammatically correct Hindi translation of the sentence (without parentheses — the Hindi should be a normal complete sentence).
+${translationInstruction}
 ${hindiRules}
-7. SELF-CHECK before responding: (a) Is the English verb form correct for "${input.tense}"? (b) Does the Hindi use "ने" correctly for transitive verbs in Perfect tenses? (c) Are optional time words wrapped in parentheses?
-8. Respond with ONLY a JSON object: { "sentence": [ { "word": "...", "pos": "..." }, ... ], "hindiTranslation": "हिंदी अनुवाद" }`;
+${selfCheckInstruction}
+8. Respond with ONLY a JSON object: { "sentence": [ { "word": "...", "pos": "..." }, ... ], "hindiTranslation": "${isHindi ? 'हिंदी अनुवाद' : 'བོད་ཡིག་བསྒྱུར'}", "nativeTranslation": "${translationLang} translation here" }`;
 }
 
 export async function generateSentenceAction(input: SentenceInput): Promise<SentenceOutput> {
@@ -137,8 +150,12 @@ export async function generateSentenceAction(input: SentenceInput): Promise<Sent
   const prompt = buildPrompt(input);
 
   if (input.provider === 'groq') {
+    const lang = input.nativeLanguage || 'hi';
+    const systemContent = lang === 'bo'
+      ? 'You are an expert English grammar teacher who also knows Tibetan (བོད་སྐད) well. You MUST follow tense formulas exactly. Provide Tibetan translations in standard Tibetan script.'
+      : 'You are an expert English grammar teacher who also knows Hindi grammar perfectly. You MUST follow tense formulas exactly. For Hindi translations of Perfect tenses: ALWAYS use ergative "ने" with transitive verbs (मैंने, उसने, हमने — NEVER मैं, वह, हम). This is non-negotiable.';
     const responseText = await callGroq(input.apiKey, [
-      { role: 'system', content: 'You are an expert English grammar teacher who also knows Hindi grammar perfectly. You MUST follow tense formulas exactly. For Hindi translations of Perfect tenses: ALWAYS use ergative "ने" with transitive verbs (मैंने, उसने, हमने — NEVER मैं, वह, हम). This is non-negotiable.' },
+      { role: 'system', content: systemContent },
       { role: 'user', content: prompt },
     ], { jsonMode: true, temperature: 0.4 });
 

@@ -12,8 +12,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { TENSES_CATEGORIES } from '@/components/tense-selector';
 import { cn } from '@/lib/utils';
+import { useNativeLanguage } from '@/context/language-context';
+import { TENSE_NATIVE_SUFFIXES } from '@/lib/native-labels';
 
 export default function PrintTenseChartPage() {
+  const { nativeLanguage } = useNativeLanguage();
   const handlePrint = () => {
     window.print();
   };
@@ -62,7 +65,7 @@ export default function PrintTenseChartPage() {
                         {tense.displayName}
                       </CardTitle>
                       <p className="text-[9px] sm:text-[10px] text-muted-foreground mt-0.5 print:mt-0 leading-tight print:text-[9px] print:leading-tight font-body">
-                        {tense.hindiCue}
+                        {TENSE_NATIVE_SUFFIXES[tense.name]?.[nativeLanguage] || tense.hindiCue}
                       </p>
                     </CardHeader>
                     <CardContent className="p-1 print:p-0.5 print:pt-0 print:flex-grow-0 flex-grow">

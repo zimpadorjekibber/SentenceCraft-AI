@@ -23,11 +23,11 @@ const INITIAL_STATE: TransliterationState = {
 };
 
 /**
- * Hook that provides Hindi transliteration suggestions using Google Input Tools.
- * As the user types in English/Roman characters, it fetches Hindi suggestions
- * for the current word.
+ * Hook that provides transliteration suggestions using Google Input Tools.
+ * As the user types in English/Roman characters, it fetches native script suggestions
+ * for the current word. Supports Hindi (hi) and Tibetan (bo).
  */
-export function useHindiTransliteration() {
+export function useHindiTransliteration(language: 'hi' | 'bo' = 'hi') {
   const [state, setState] = useState<TransliterationState>(INITIAL_STATE);
   const abortRef = useRef<AbortController | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -85,7 +85,7 @@ export function useHindiTransliteration() {
 
         try {
           const res = await fetch(
-            `${TRANSLITERATE_API_URL}?text=${encodeURIComponent(currentWord)}`,
+            `${TRANSLITERATE_API_URL}?text=${encodeURIComponent(currentWord)}&lang=${language}`,
             { signal: controller.signal }
           );
           const data = await res.json();
@@ -111,7 +111,7 @@ export function useHindiTransliteration() {
         }
       }, 200);
     },
-    []
+    [language]
   );
 
   /**

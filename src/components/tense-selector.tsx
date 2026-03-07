@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CalendarClock, Sun, Timer, Rocket } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useNativeLanguage } from '@/context/language-context';
+import { TENSE_NATIVE_SUFFIXES } from '@/lib/native-labels';
 
 interface TenseSelectorProps {
   selectedTense: string | null;
@@ -76,6 +78,7 @@ const TENSE_BUTTON_STYLES: Record<string, string> = {
 
 
 export function TenseSelector({ selectedTense, onTenseSelect, disabled }: TenseSelectorProps) {
+  const { nativeLanguage } = useNativeLanguage();
   return (
     <Card className="shadow-lg border-2 border-primary/20">
       <CardHeader className="px-3 sm:px-6 pb-2 sm:pb-4">
@@ -113,7 +116,7 @@ export function TenseSelector({ selectedTense, onTenseSelect, disabled }: TenseS
                     <span className="font-semibold text-center text-sm md:text-base whitespace-nowrap">{tenseInfo.displayName.split(" ")[0]} {tenseInfo.displayName.split(" ")[1]}</span>
                     {tenseInfo.displayName.split(" ")[2] && <span className="font-semibold text-center text-sm md:text-base whitespace-nowrap">{tenseInfo.displayName.split(" ")[2]} {tenseInfo.displayName.split(" ")[3]}</span>}
                      <span className="text-[11px] sm:text-sm mt-1 opacity-90 font-normal">
-                        {tenseInfo.hindiCue.split('//BR//').map((line, idx, arr) => (
+                        {(TENSE_NATIVE_SUFFIXES[tenseInfo.name]?.[nativeLanguage] || tenseInfo.hindiCue).split('//BR//').map((line, idx, arr) => (
                           <React.Fragment key={idx}>
                             {line}
                             {idx < arr.length - 1 && <br />}

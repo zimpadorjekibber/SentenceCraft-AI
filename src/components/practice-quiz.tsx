@@ -16,6 +16,7 @@ import { QUIZ_CATEGORIES, findTopic } from '@/lib/quiz-topics';
 import type { QuizCategory, QuizTopic } from '@/lib/quiz-topics';
 import type { QuizQuestion } from '@/types/firestore-types';
 import type { AiProvider } from '@/components/api-key-dialog';
+import { useNativeLanguage } from '@/context/language-context';
 import {
   GraduationCap, CheckCircle2, XCircle, ArrowRight, RotateCcw, Trophy,
   ArrowLeft, BookOpen, ChevronRight,
@@ -41,6 +42,8 @@ type QuizState = 'setup' | 'loading' | 'in_progress' | 'reviewing' | 'results';
 export function PracticeQuiz({ apiKey, aiProvider }: PracticeQuizProps) {
   const { user, refreshStats } = useAuth();
   const { toast } = useToast();
+  const { nativeLanguage, t } = useNativeLanguage();
+  const getNativeLabel = (hindi: string, tibetan?: string) => nativeLanguage === 'bo' ? (tibetan || hindi) : hindi;
 
   // Setup flow state
   const [setupStep, setSetupStep] = useState<SetupStep>('category');
@@ -174,10 +177,10 @@ export function PracticeQuiz({ apiKey, aiProvider }: PracticeQuizProps) {
       <div className="space-y-6">
         <div className="flex items-center gap-2 mb-2">
           <GraduationCap className="h-6 w-6 text-primary" />
-          <h2 className="text-xl font-bold">Practice Quiz / अभ्यास क्विज़</h2>
+          <h2 className="text-xl font-bold">Practice Quiz / {t({ hi: 'अभ्यास क्विज़', bo: 'སྦྱོང་བརྡར་དྲི་བ' })}</h2>
         </div>
         <p className="text-sm text-muted-foreground">
-          Category चुनें — Tenses से लेकर Punctuation तक, सब कुछ practice करें!
+          {t({ hi: 'Category चुनें — Tenses से लेकर Punctuation तक, सब कुछ practice करें!', bo: 'རིགས་དབྱེ་འདེམས་རོགས — Tenses ནས Punctuation བར་སྦྱོང་བརྡར་བྱེད།' })}
         </p>
 
         {!apiKey && (
@@ -204,7 +207,7 @@ export function PracticeQuiz({ apiKey, aiProvider }: PracticeQuizProps) {
                   </div>
                   <div>
                     <p className="font-semibold text-sm leading-tight">{cat.label}</p>
-                    <p className="text-xs text-muted-foreground">{cat.labelHindi}</p>
+                    <p className="text-xs text-muted-foreground">{getNativeLabel(cat.labelHindi, cat.labelTibetan)}</p>
                   </div>
                   <Badge variant="secondary" className="text-[10px] px-1.5">
                     {cat.topics.length} {cat.topics.length === 1 ? 'topic' : 'topics'}
@@ -236,12 +239,12 @@ export function PracticeQuiz({ apiKey, aiProvider }: PracticeQuizProps) {
             </div>
             <div>
               <h2 className="text-lg font-bold leading-tight">{selectedCategory.label}</h2>
-              <p className="text-xs text-muted-foreground">{selectedCategory.labelHindi}</p>
+              <p className="text-xs text-muted-foreground">{getNativeLabel(selectedCategory.labelHindi, selectedCategory.labelTibetan)}</p>
             </div>
           </div>
         </div>
 
-        <p className="text-sm text-muted-foreground">Topic चुनें जिसकी practice करनी है:</p>
+        <p className="text-sm text-muted-foreground">{t({ hi: 'Topic चुनें जिसकी practice करनी है:', bo: 'སྦྱོང་བརྡར་བྱེད་འདོད་པའི་བརྗོད་གཞི་འདེམས་རོགས།' })}</p>
 
         {/* Topic buttons */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -254,7 +257,7 @@ export function PracticeQuiz({ apiKey, aiProvider }: PracticeQuizProps) {
             >
               <div>
                 <p className="font-medium text-sm">{topic.label}</p>
-                <p className="text-xs text-muted-foreground">{topic.labelHindi}</p>
+                <p className="text-xs text-muted-foreground">{getNativeLabel(topic.labelHindi, topic.labelTibetan)}</p>
               </div>
               <ChevronRight className="h-4 w-4 shrink-0 ml-2 text-muted-foreground" />
             </Button>
@@ -282,7 +285,7 @@ export function PracticeQuiz({ apiKey, aiProvider }: PracticeQuizProps) {
             </div>
             <div>
               <h2 className="text-lg font-bold leading-tight">{selectedTopic.label}</h2>
-              <p className="text-xs text-muted-foreground">{selectedCategory.label} › {selectedTopic.labelHindi}</p>
+              <p className="text-xs text-muted-foreground">{selectedCategory.label} › {getNativeLabel(selectedTopic.labelHindi, selectedTopic.labelTibetan)}</p>
             </div>
           </div>
         </div>
@@ -291,14 +294,14 @@ export function PracticeQuiz({ apiKey, aiProvider }: PracticeQuizProps) {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">Difficulty / कठिनाई</CardTitle>
+              <CardTitle className="text-base">Difficulty / {t({ hi: 'कठिनाई', bo: 'དཀའ་ཚད' })}</CardTitle>
             </CardHeader>
             <CardContent>
               <RadioGroup value={difficulty} onValueChange={(v) => setDifficulty(v as any)} className="space-y-2">
                 {(['easy', 'medium', 'hard'] as const).map(d => (
                   <div key={d} className="flex items-center space-x-2">
                     <RadioGroupItem value={d} id={`diff-${d}`} />
-                    <Label htmlFor={`diff-${d}`} className="capitalize">{d} {d === 'easy' ? '(आसान)' : d === 'medium' ? '(मध्यम)' : '(कठिन)'}</Label>
+                    <Label htmlFor={`diff-${d}`} className="capitalize">{d} ({d === 'easy' ? t({ hi: 'आसान', bo: 'སླ་པོ' }) : d === 'medium' ? t({ hi: 'मध्यम', bo: 'འབྲིང' }) : t({ hi: 'कठिन', bo: 'དཀའ་པོ' })})</Label>
                   </div>
                 ))}
               </RadioGroup>
@@ -307,7 +310,7 @@ export function PracticeQuiz({ apiKey, aiProvider }: PracticeQuizProps) {
 
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">Questions / सवाल</CardTitle>
+              <CardTitle className="text-base">Questions / {t({ hi: 'सवाल', bo: 'དྲི་བ' })}</CardTitle>
             </CardHeader>
             <CardContent>
               <RadioGroup value={String(questionCount)} onValueChange={(v) => setQuestionCount(Number(v))} className="space-y-2">
@@ -334,7 +337,7 @@ export function PracticeQuiz({ apiKey, aiProvider }: PracticeQuizProps) {
 
         <Button onClick={handleStartQuiz} disabled={!apiKey} className="w-full" size="lg">
           <GraduationCap className="mr-2 h-5 w-5" />
-          Start Quiz / क्विज़ शुरू करें
+          Start Quiz / {t({ hi: 'क्विज़ शुरू करें', bo: 'དྲི་བ་འགོ་བཙུགས' })}
         </Button>
       </div>
     );
@@ -347,7 +350,7 @@ export function PracticeQuiz({ apiKey, aiProvider }: PracticeQuizProps) {
     return (
       <div className="flex flex-col items-center justify-center py-20 space-y-4">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-        <p className="text-muted-foreground">Generating quiz questions... / सवाल बना रहे हैं...</p>
+        <p className="text-muted-foreground">Generating quiz questions... / {t({ hi: 'सवाल बना रहे हैं...', bo: 'དྲི་བ་བཟོ་བཞིན་པ...' })}</p>
         <Badge variant="outline">{topicBadgeLabel} — {difficulty}</Badge>
       </div>
     );
@@ -414,14 +417,14 @@ export function PracticeQuiz({ apiKey, aiProvider }: PracticeQuizProps) {
         <div className="flex gap-3">
           {!isAnswerChecked ? (
             <Button onClick={handleCheckAnswer} disabled={!selectedAnswer} className="flex-1">
-              Check Answer / जवाब देखें
+              Check Answer / {t({ hi: 'जवाब देखें', bo: 'ལན་ལྟ་བ' })}
             </Button>
           ) : (
             <Button onClick={handleNext} className="flex-1">
               {currentIndex < questions.length - 1 ? (
                 <><ArrowRight className="mr-2 h-4 w-4" />Next Question</>
               ) : (
-                <><Trophy className="mr-2 h-4 w-4" />See Results / नतीजे देखें</>
+                <><Trophy className="mr-2 h-4 w-4" />See Results / {t({ hi: 'नतीजे देखें', bo: 'འབྲས་བུ་ལྟ་བ' })}</>
               )}
             </Button>
           )}
@@ -452,7 +455,7 @@ export function PracticeQuiz({ apiKey, aiProvider }: PracticeQuizProps) {
         {/* Question Review */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Review / समीक्षा</CardTitle>
+            <CardTitle className="text-base">Review / {t({ hi: 'समीक्षा', bo: 'བསྐྱར་ཞིབ' })}</CardTitle>
           </CardHeader>
           <CardContent>
             <ScrollArea className="max-h-[400px]">
@@ -480,11 +483,11 @@ export function PracticeQuiz({ apiKey, aiProvider }: PracticeQuizProps) {
         <div className="flex gap-3">
           <Button onClick={handleRetakeSameTopic} variant="outline" className="flex-1">
             <RotateCcw className="mr-2 h-4 w-4" />
-            Retry Topic / फिर से
+            Retry Topic / {t({ hi: 'फिर से', bo: 'བསྐྱར་དུ' })}
           </Button>
           <Button onClick={handleRetake} variant="outline" className="flex-1">
             <BookOpen className="mr-2 h-4 w-4" />
-            New Topic / नया विषय
+            New Topic / {t({ hi: 'नया विषय', bo: 'བརྗོད་གཞི་གསར་པ' })}
           </Button>
         </div>
       </div>

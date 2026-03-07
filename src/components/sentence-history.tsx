@@ -9,6 +9,7 @@ import { getSentenceHistory, toggleFavorite } from '@/lib/firestore-service';
 import type { SavedSentence } from '@/types/firestore-types';
 import { Heart, Clock, ChevronDown } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { useNativeLanguage } from '@/context/language-context';
 import type { DocumentSnapshot } from 'firebase/firestore';
 
 interface SentenceHistoryProps {
@@ -19,6 +20,7 @@ interface SentenceHistoryProps {
 
 export function SentenceHistory({ filterTense, filterSource, maxHeight = '400px' }: SentenceHistoryProps) {
   const { user } = useAuth();
+  const { t } = useNativeLanguage();
   const [sentences, setSentences] = useState<SavedSentence[]>([]);
   const [lastDoc, setLastDoc] = useState<DocumentSnapshot | null>(null);
   const [loading, setLoading] = useState(false);
@@ -59,11 +61,11 @@ export function SentenceHistory({ filterTense, filterSource, maxHeight = '400px'
   }, [user]);
 
   if (!user) {
-    return <p className="text-sm text-muted-foreground text-center py-4">Login karein history dekhne ke liye.</p>;
+    return <p className="text-sm text-muted-foreground text-center py-4">{t({ hi: 'Login karein history dekhne ke liye.', bo: 'ལོ་རྒྱུས་བལྟ་བར་ login བྱོས།' })}</p>;
   }
 
   if (sentences.length === 0 && !loading) {
-    return <p className="text-sm text-muted-foreground text-center py-4">Koi sentence history nahi hai. Sentences generate karein!</p>;
+    return <p className="text-sm text-muted-foreground text-center py-4">{t({ hi: 'Koi sentence history nahi hai. Sentences generate karein!', bo: 'ཚིག་གྲུབ་ལོ་རྒྱུས་མེད། ཚིག་གྲུབ་བཟོས།' })}</p>;
   }
 
   return (
