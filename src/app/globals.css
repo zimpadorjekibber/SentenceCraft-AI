@@ -122,6 +122,37 @@
   }
 }
 
+/*
+ * Tibetan script auto-sizing:
+ * Uses @font-face with size-adjust to automatically render Tibetan glyphs
+ * ~20% larger wherever they appear (buttons, labels, cards, etc.)
+ * This works even when there's no [lang="bo"] attribute on the element.
+ */
+@font-face {
+  font-family: 'Tibetan Sized';
+  src: local('Noto Sans Tibetan');
+  font-weight: 400;
+  unicode-range: U+0F00-0FFF;
+  size-adjust: 120%;
+}
+@font-face {
+  font-family: 'Tibetan Sized';
+  src: local('Noto Sans Tibetan Bold'), local('Noto Sans Tibetan');
+  font-weight: 500 800;
+  unicode-range: U+0F00-0FFF;
+  size-adjust: 120%;
+}
+
+/* Tibetan script — explicit lang attribute: extra bold + spacing */
+[lang="bo"],
+.tibetan-text {
+  font-family: 'Noto Sans Tibetan', sans-serif;
+  font-size: 1.15em;
+  font-weight: 600;
+  line-height: 2;
+  letter-spacing: 0.02em;
+}
+
 /* Prevent iOS zoom on input focus — font must be >= 16px */
 @media screen and (max-width: 767px) {
   input, select, textarea {

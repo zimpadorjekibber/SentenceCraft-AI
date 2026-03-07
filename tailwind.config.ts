@@ -21,8 +21,8 @@ export default {
     },
     extend: {
       fontFamily: {
-        body: ['Inter', 'Noto Sans Devanagari', 'sans-serif'],
-        headline: ['Inter', 'Noto Sans Devanagari', 'sans-serif'],
+        body: ['Tibetan Sized', 'Inter', 'Noto Sans Devanagari', 'Noto Sans Tibetan', 'sans-serif'],
+        headline: ['Tibetan Sized', 'Inter', 'Noto Sans Devanagari', 'Noto Sans Tibetan', 'sans-serif'],
         code: ['monospace'],
       },
       colors: {

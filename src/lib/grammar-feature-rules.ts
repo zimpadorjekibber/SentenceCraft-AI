@@ -30,7 +30,7 @@ export const GRAMMAR_FEATURE_RULES: Record<string, string> = {
 
 **Key Changes:**
 1. **Reporting Verb:** said to -> told, said -> said.
-2. **Tense Change:** Present Simple -> Past Simple, Present Continuous -> Past Continuous, etc.
+2. **Tense Change:** Present Indefinite -> Past Indefinite, Present Continuous -> Past Continuous, etc.
 3. **Pronoun Change:** 'I' changes to 'he/she' based on the speaker.
 4. **Time Change:** 'today' -> 'that day', 'now' -> 'then'.
 `,
@@ -55,15 +55,15 @@ Express ability, possibility, permission, or obligation.
 Used to talk about situations and their results.
 
 1. **Zero Conditional (General Truth):**
-   - Structure: If + <pos type="tense_marker">Present Simple</pos>, <pos type="tense_marker">Present Simple</pos>.
+   - Structure: If + <pos type="tense_marker">Present Indefinite</pos>, <pos type="tense_marker">Present Indefinite</pos>.
    - Example: If you heat ice, it melts.
 
 2. **First Conditional (Real Possibility):**
-   - Structure: If + <pos type="tense_marker">Present Simple</pos>, <pos type="auxiliary">will</pos> + <pos type="verb_form">V1</pos>.
+   - Structure: If + <pos type="tense_marker">Present Indefinite</pos>, <pos type="auxiliary">will</pos> + <pos type="verb_form">V1</pos>.
    - Example: If it rains, I will stay home.
 
 3. **Second Conditional (Imaginary/Unlikely):**
-   - Structure: If + <pos type="tense_marker">Past Simple</pos>, <pos type="auxiliary">would</pos> + <pos type="verb_form">V1</pos>.
+   - Structure: If + <pos type="tense_marker">Past Indefinite</pos>, <pos type="auxiliary">would</pos> + <pos type="verb_form">V1</pos>.
    - Example: If I won the lottery, I would buy a car.
 
 4. **Third Conditional (Past Impossible):**

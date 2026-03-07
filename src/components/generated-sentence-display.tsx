@@ -425,7 +425,7 @@ Respond with ONLY a valid JSON object:
               highlightMode="tense"
             />
             {displayHindi && (
-              <p className="text-sm sm:text-base text-muted-foreground italic px-1" lang="hi">
+              <p className="text-sm sm:text-base text-muted-foreground italic px-1" lang={nativeLanguage === 'bo' ? 'bo' : 'hi'}>
                 {displayHindi}
               </p>
             )}

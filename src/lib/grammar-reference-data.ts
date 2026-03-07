@@ -466,7 +466,7 @@ export const GRAMMAR_REFERENCE_DATA: GrammarPosTopic[] = [
     textColor: "text-indigo-700 dark:text-indigo-300",
     types: [
       {
-        name: "Simple Present",
+        name: "Present Indefinite",
         nameHindi: "सामान्य वर्तमान काल",
         description: "Habitual actions, facts, routines. [S + V1/V1s]",
         descriptionHindi: "आदत, सत्य, नियमित काम। [S + V1/V1s]",
@@ -494,7 +494,7 @@ export const GRAMMAR_REFERENCE_DATA: GrammarPosTopic[] = [
         examples: "He has been studying since morning. It has been raining for two hours.",
       },
       {
-        name: "Simple Past",
+        name: "Past Indefinite",
         nameHindi: "सामान्य भूतकाल",
         description: "Action completed in the past. [S + V2]",
         descriptionHindi: "बीते समय में पूरा हो चुका काम। [S + V2]",
@@ -522,7 +522,7 @@ export const GRAMMAR_REFERENCE_DATA: GrammarPosTopic[] = [
         examples: "I had been waiting for an hour when the bus came.",
       },
       {
-        name: "Simple Future",
+        name: "Future Indefinite",
         nameHindi: "सामान्य भविष्य काल",
         description: "Action that will happen in the future. [S + will/shall + V1]",
         descriptionHindi: "आने वाले समय में होने वाला काम। [S + will/shall + V1]",

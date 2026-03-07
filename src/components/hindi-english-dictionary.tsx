@@ -434,13 +434,13 @@ Provide ALL 5 forms of this verb.
 Respond with ONLY a valid JSON object:
 {
   "base": "V1 - Base form (e.g., run)",
-  "pastSimple": "V2 - Past Simple (e.g., ran)",
+  "pastSimple": "V2 - Past Indefinite (e.g., ran)",
   "pastParticiple": "V3 - Past Participle (e.g., run)",
   "presentParticiple": "V4 - Present Participle / V-ing (e.g., running)",
   "thirdPersonSingular": "V5 - Third Person Singular / V-s/es (e.g., runs)",
   "examples": [
     {"form": "V1", "label": "Base Form", "sentence": "I run every morning.", "sentenceHindi": "${verbLangName} translation of the example sentence"},
-    {"form": "V2", "label": "Past Simple", "sentence": "He ran yesterday.", "sentenceHindi": "${verbLangName} translation"},
+    {"form": "V2", "label": "Past Indefinite", "sentence": "He ran yesterday.", "sentenceHindi": "${verbLangName} translation"},
     {"form": "V3", "label": "Past Participle", "sentence": "She has run 5 kilometers.", "sentenceHindi": "${verbLangName} translation"},
     {"form": "V4", "label": "Present Participle", "sentence": "They are running now.", "sentenceHindi": "${verbLangName} translation"},
     {"form": "V5", "label": "3rd Person Singular", "sentence": "He runs fast.", "sentenceHindi": "${verbLangName} translation"}
@@ -877,7 +877,7 @@ Respond with ONLY a valid JSON object:
                                 <td className="p-2 font-bold text-primary">{verbForms.base}</td>
                               </tr>
                               <tr className="border-b border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/10">
-                                <td className="p-2 font-medium text-xs text-muted-foreground">V2 (Past Simple)</td>
+                                <td className="p-2 font-medium text-xs text-muted-foreground">V2 (Past Indefinite)</td>
                                 <td className="p-2 font-bold text-primary">{verbForms.pastSimple}</td>
                               </tr>
                               <tr className="border-b border-blue-200 dark:border-blue-800">
