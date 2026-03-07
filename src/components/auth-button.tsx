@@ -1,7 +1,7 @@
 'use client';
 
-import React from 'react';
-import { signInWithPopup, signInWithRedirect, signOut } from 'firebase/auth';
+import React, { useState } from 'react';
+import { signInWithPopup, signOut } from 'firebase/auth';
 import { auth, googleProvider, isFirebaseConfigured } from '@/lib/firebase';
 import { useAuth } from '@/context/auth-context';
 import { Button } from './ui/button';
@@ -15,7 +15,8 @@ import {
   DropdownMenuTrigger,
 } from './ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
-import { LogIn, LogOut, Target, GraduationCap } from 'lucide-react';
+import { LogIn, LogOut, Target, GraduationCap, Loader2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 interface AuthButtonProps {
   onOpenProgress?: () => void;
@@ -24,28 +25,64 @@ interface AuthButtonProps {
 
 export function AuthButton({ onOpenProgress, onOpenQuiz }: AuthButtonProps) {
   const { user } = useAuth();
+  const { toast } = useToast();
+  const [signingIn, setSigningIn] = useState(false);
 
   const handleSignIn = async () => {
-    if (!auth) return;
+    if (!auth) {
+      toast({
+        title: 'Login Error',
+        description: 'Firebase is not initialized. Please check configuration.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setSigningIn(true);
     try {
-      // Use redirect on mobile (popup often blocked), popup on desktop
-      const isMobile = /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(navigator.userAgent);
-      if (isMobile) {
-        await signInWithRedirect(auth, googleProvider);
-      } else {
-        await signInWithPopup(auth, googleProvider);
-      }
+      await signInWithPopup(auth, googleProvider);
     } catch (error: any) {
-      // If popup blocked or fails, fallback to redirect
-      if (error?.code === 'auth/popup-blocked' || error?.code === 'auth/popup-closed-by-user' || error?.code === 'auth/cancelled-popup-request') {
-        try {
-          await signInWithRedirect(auth, googleProvider);
-        } catch (redirectError) {
-          console.error("Redirect sign-in error:", redirectError);
-        }
-      } else {
-        console.error("Error during sign-in:", error);
+      console.error("Sign-in error:", error);
+
+      const errorCode = error?.code || 'unknown';
+      const errorMessage = error?.message || 'Unknown error';
+
+      let userMessage = '';
+
+      switch (errorCode) {
+        case 'auth/popup-blocked':
+          userMessage = 'Popup was blocked by your browser. Please allow popups for this site and try again.';
+          break;
+        case 'auth/popup-closed-by-user':
+          userMessage = 'Sign-in popup was closed. Please try again.';
+          break;
+        case 'auth/cancelled-popup-request':
+          userMessage = 'Sign-in was cancelled. Please try again.';
+          break;
+        case 'auth/operation-not-allowed':
+          userMessage = 'Google Sign-In is not enabled in Firebase Console. Please enable it in Firebase Console → Authentication → Sign-in method → Google.';
+          break;
+        case 'auth/unauthorized-domain':
+          userMessage = 'This domain is not authorized for Firebase Auth. Add your domain in Firebase Console → Authentication → Settings → Authorized domains.';
+          break;
+        case 'auth/network-request-failed':
+          userMessage = 'Network error. Please check your internet connection and try again.';
+          break;
+        case 'auth/internal-error':
+          userMessage = 'Firebase internal error. Please check Firebase Console configuration.';
+          break;
+        default:
+          userMessage = `Sign-in failed: ${errorCode} - ${errorMessage}`;
       }
+
+      toast({
+        title: 'Login Failed',
+        description: userMessage,
+        variant: 'destructive',
+        duration: 10000, // Show for 10 seconds so user can read it
+      });
+    } finally {
+      setSigningIn(false);
     }
   };
 
@@ -53,6 +90,10 @@ export function AuthButton({ onOpenProgress, onOpenQuiz }: AuthButtonProps) {
     if (!auth) return;
     try {
       await signOut(auth);
+      toast({
+        title: 'Logged Out',
+        description: 'You have been signed out successfully.',
+      });
     } catch (error) {
       console.error("Error during sign-out:", error);
     }
@@ -118,9 +159,18 @@ export function AuthButton({ onOpenProgress, onOpenQuiz }: AuthButtonProps) {
   }
 
   return (
-    <Button onClick={handleSignIn} variant="outline" className="h-9 w-9 sm:h-auto sm:w-auto sm:px-3">
-      <LogIn className="h-4 w-4 sm:mr-2" />
-      <span className="hidden sm:inline">Login</span>
+    <Button
+      onClick={handleSignIn}
+      variant="outline"
+      className="h-9 w-9 sm:h-auto sm:w-auto sm:px-3"
+      disabled={signingIn}
+    >
+      {signingIn ? (
+        <Loader2 className="h-4 w-4 sm:mr-2 animate-spin" />
+      ) : (
+        <LogIn className="h-4 w-4 sm:mr-2" />
+      )}
+      <span className="hidden sm:inline">{signingIn ? 'Signing in...' : 'Login'}</span>
     </Button>
   );
 }

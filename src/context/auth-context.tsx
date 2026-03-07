@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
-import { onAuthStateChanged, getRedirectResult, User } from 'firebase/auth';
+import { onAuthStateChanged, User } from 'firebase/auth';
 import { auth, isFirebaseConfigured } from '@/lib/firebase';
 import { LoadingSpinner } from '@/components/loading-spinner';
 import { createOrUpdateUserProfile, getUserStats, updateStreak } from '@/lib/firestore-service';
@@ -27,13 +27,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (stats) setUserStats(stats);
   }, [user]);
 
-  // Handle redirect result (for mobile sign-in)
+  // Log Firebase configuration status for debugging
   useEffect(() => {
-    if (isFirebaseConfigured && auth) {
-      getRedirectResult(auth).catch((error) => {
-        console.error("Redirect result error:", error);
-      });
-    }
+    console.log('[Auth] Firebase configured:', isFirebaseConfigured);
+    console.log('[Auth] Auth instance:', auth ? 'available' : 'null');
   }, []);
 
   useEffect(() => {

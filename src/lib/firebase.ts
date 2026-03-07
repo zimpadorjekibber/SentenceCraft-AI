@@ -26,14 +26,21 @@ const hasConfig =
   firebaseConfig.apiKey !== "undefined" && 
   firebaseConfig.projectId !== "undefined";
 
+if (typeof window !== 'undefined') {
+  console.log('[Firebase] hasConfig:', hasConfig);
+  console.log('[Firebase] apiKey present:', !!firebaseConfig.apiKey);
+  console.log('[Firebase] projectId:', firebaseConfig.projectId);
+}
+
 if (hasConfig && typeof window !== 'undefined') {
   try {
     app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
     auth = getAuth(app);
     db = getFirestore(app);
     isFirebaseConfigured = true;
+    console.log('[Firebase] Initialized successfully');
   } catch (error) {
-    console.error("Firebase initialization error:", error);
+    console.error("[Firebase] Initialization error:", error);
     isFirebaseConfigured = false;
   }
 }
