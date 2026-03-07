@@ -17,8 +17,8 @@ const WordPosSchema = z.object({
 
 const SentenceOutputSchema = z.object({
   sentence: z.array(WordPosSchema),
-  hindiTranslation: z.string().describe('Natural Hindi translation of the complete sentence'),
-  nativeTranslation: z.string().optional().describe('Translation in the selected native language (Hindi or Tibetan)'),
+  hindiTranslation: z.string().describe('Translation of the sentence in the requested native language (Hindi or Tibetan)'),
+  nativeTranslation: z.string().optional().describe('Same translation as hindiTranslation in the selected native language'),
 });
 
 const SentenceInputSchema = z.object({
@@ -99,9 +99,10 @@ For INTRANSITIVE verbs (जाना, आना, सोना, रोना): Do
 ` : '';
 
   const translationLang = isHindi ? 'Hindi' : 'Tibetan (བོད་སྐད)';
+  const translationScript = isHindi ? 'Devanagari (हिंदी)' : 'Tibetan script (བོད་ཡིག)';
   const translationInstruction = isHindi
-    ? `6. Provide a grammatically correct Hindi translation of the sentence (without parentheses — the Hindi should be a normal complete sentence).`
-    : `6. Provide a grammatically correct Tibetan (བོད་སྐད) translation of the sentence using standard Tibetan script (without parentheses — the translation should be a normal complete sentence).`;
+    ? `6. Provide a grammatically correct Hindi translation of the sentence (without parentheses — the Hindi should be a normal complete sentence). Put the Hindi translation in BOTH the "hindiTranslation" and "nativeTranslation" fields.`
+    : `6. Provide a grammatically correct Tibetan (བོད་སྐད) translation of the sentence using standard Tibetan script (without parentheses — the translation should be a normal complete sentence). CRITICAL: The "hindiTranslation" field MUST contain the Tibetan (བོད་སྐད) translation in Tibetan script — NOT Hindi, NOT English. Also put the same Tibetan translation in the "nativeTranslation" field.`;
 
   const selfCheckInstruction = isHindi
     ? `7. SELF-CHECK before responding: (a) Is the English verb form correct for "${input.tense}"? (b) Does the Hindi use "ने" correctly for transitive verbs in Perfect tenses? (c) Are optional time words wrapped in parentheses?`
@@ -139,7 +140,8 @@ Instructions:
 ${translationInstruction}
 ${hindiRules}
 ${selfCheckInstruction}
-8. Respond with ONLY a JSON object: { "sentence": [ { "word": "...", "pos": "..." }, ... ], "hindiTranslation": "${isHindi ? 'हिंदी अनुवाद' : 'བོད་ཡིག་བསྒྱུར'}", "nativeTranslation": "${translationLang} translation here" }`;
+8. Respond with ONLY a JSON object: { "sentence": [ { "word": "...", "pos": "..." }, ... ], "hindiTranslation": "YOUR ${translationLang.toUpperCase()} TRANSLATION IN ${translationScript.toUpperCase()}", "nativeTranslation": "SAME ${translationLang.toUpperCase()} TRANSLATION" }
+REMINDER: Both "hindiTranslation" and "nativeTranslation" MUST be in ${translationLang} (${translationScript}). Do NOT put English in these fields.`;
 }
 
 export async function generateSentenceAction(input: SentenceInput): Promise<SentenceOutput> {
@@ -152,7 +154,7 @@ export async function generateSentenceAction(input: SentenceInput): Promise<Sent
   if (input.provider === 'groq') {
     const lang = input.nativeLanguage || 'hi';
     const systemContent = lang === 'bo'
-      ? 'You are an expert English grammar teacher who also knows Tibetan (བོད་སྐད) well. You MUST follow tense formulas exactly. Provide Tibetan translations in standard Tibetan script.'
+      ? 'You are an expert English grammar teacher who also knows Tibetan (བོད་སྐད) well. You MUST follow tense formulas exactly. CRITICAL: ALL translations must be in Tibetan script (བོད་ཡིག). The "hindiTranslation" field must contain TIBETAN text, NOT Hindi or English. The "nativeTranslation" field must also contain the same Tibetan translation.'
       : 'You are an expert English grammar teacher who also knows Hindi grammar perfectly. You MUST follow tense formulas exactly. For Hindi translations of Perfect tenses: ALWAYS use ergative "ने" with transitive verbs (मैंने, उसने, हमने — NEVER मैं, वह, हम). This is non-negotiable.';
     const responseText = await callGroq(input.apiKey, [
       { role: 'system', content: systemContent },

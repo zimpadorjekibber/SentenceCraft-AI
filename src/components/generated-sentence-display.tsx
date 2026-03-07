@@ -159,7 +159,18 @@ export function GeneratedSentenceDisplay({
 
   const buildGrammarPrompt = useCallback((type: GrammarType): string => {
     const typeLabel = GRAMMAR_TYPE_EN[type];
-    return `You are an expert English grammar teacher. Convert the following sentence to its ${typeLabel} form.
+    const isHindi = nativeLanguage === 'hi';
+    const translationLang = isHindi ? 'Hindi' : 'Tibetan (བོད་སྐད)';
+    const translationHint = isHindi ? 'Hindi translation of the converted sentence' : 'Tibetan (བོད་སྐད) translation in Tibetan script';
+
+    const hindiPerfectRule = isHindi ? `
+HINDI GRAMMAR RULE FOR PERFECT TENSES:
+- For TRANSITIVE verbs in Perfect tenses (Present/Past/Future Perfect): subject MUST use ergative "ने" — मैंने, उसने, हमने, तुमने, उन्होंने, आपने. Verb agrees with object's gender/number.
+  Example: "I have not played cricket" = "मैंने क्रिकेट नहीं खेला है" (NOT "मैं क्रिकेट नहीं खेला है")
+- For INTRANSITIVE verbs: Do NOT use "ने". Subject stays as-is: मैं, वह, हम. Verb agrees with subject.
+  Example: "He has not gone" = "वह नहीं गया है"` : '';
+
+    return `You are an expert English grammar teacher${isHindi ? '' : ' who also knows Tibetan (བོད་སྐད)'}. Convert the following sentence to its ${typeLabel} form.
 Keep the SAME tense${tenseName ? ` ("${tenseName}")` : ''} — only change the sentence type.
 
 Original Sentence: "${sentenceText}"
@@ -169,23 +180,30 @@ Rules:
 - For Interrogative: Rearrange to question form (Do/Does/Did/Is/Are/Was/Were/Has/Have/Had/Will/Shall + Subject + Verb...?). MUST end with question mark.
 - For Negative Interrogative: Combine negative + question form (Doesn't/Don't/Didn't/Isn't/Aren't/Won't/Haven't... + Subject + Verb...?). MUST end with question mark.
 - IMPORTANT: For Interrogative and Negative Interrogative, ALWAYS include { "word": "?", "pos": "Punctuation" } as the LAST element in the sentence array.
-
-HINDI GRAMMAR RULE FOR PERFECT TENSES:
-- For TRANSITIVE verbs in Perfect tenses (Present/Past/Future Perfect): subject MUST use ergative "ने" — मैंने, उसने, हमने, तुमने, उन्होंने, आपने. Verb agrees with object's gender/number.
-  Example: "I have not played cricket" = "मैंने क्रिकेट नहीं खेला है" (NOT "मैं क्रिकेट नहीं खेला है")
-- For INTRANSITIVE verbs: Do NOT use "ने". Subject stays as-is: मैं, वह, हम. Verb agrees with subject.
-  Example: "He has not gone" = "वह नहीं गया है"
+${hindiPerfectRule}
+TRANSLATION: The "hindiTranslation" field MUST contain a ${translationLang} translation of the converted sentence. Do NOT put English in this field.
 
 Respond with ONLY a valid JSON object:
 {
   "sentence": [ { "word": "...", "pos": "..." }, ... ],
-  "hindiTranslation": "Hindi translation of the converted sentence"
+  "hindiTranslation": "${translationHint}"
 }`;
-  }, [sentenceText, tenseName]);
+  }, [sentenceText, tenseName, nativeLanguage]);
 
   const buildSpokenPrompt = useCallback((grammarType: GrammarType): string => {
     const sourceText = getGrammarSentenceText(grammarType);
     const grammarLabel = GRAMMAR_TYPE_EN[grammarType];
+    const isHindi = nativeLanguage === 'hi';
+    const translationLang = isHindi ? 'Hindi' : 'Tibetan (བོད་སྐད)';
+    const translationHint = isHindi ? 'Hindi translation of the spoken sentence' : 'Tibetan (བོད་སྐད) translation in Tibetan script';
+    const noteLanguage = isHindi ? 'simple Hindi so Indian students understand' : 'simple Tibetan (བོད་སྐད) so Tibetan students understand';
+
+    const hindiPerfectRule = isHindi ? `
+HINDI GRAMMAR RULE FOR PERFECT TENSES:
+- For TRANSITIVE verbs in Perfect tenses (Present/Past/Future Perfect): subject MUST use ergative "ने" — मैंने, उसने, हमने, तुमने, उन्होंने, आपने. Verb agrees with object's gender/number.
+  Example: "I've played cricket" = "मैंने क्रिकेट खेला है" (NOT "मैं क्रिकेट खेला है")
+- For INTRANSITIVE verbs: Do NOT use "ने". Subject stays as-is: मैं, वह, हम.` : '';
+
     return `You are a fluent English speaker who helps students learn real-life conversational English.
 
 The student has learned this textbook ${grammarLabel} sentence:
@@ -200,20 +218,17 @@ Rules:
 - Shorten or simplify long/formal structures
 - Keep the core meaning AND sentence type (${grammarLabel}) the same
 - The result should sound like something a real person would say in a casual conversation
-- Also provide a "spokenNote" explaining 2-3 key differences between the textbook version and the spoken version, in simple Hindi so Indian students understand. Keep it short (2-3 bullet points).
-
-HINDI GRAMMAR RULE FOR PERFECT TENSES:
-- For TRANSITIVE verbs in Perfect tenses (Present/Past/Future Perfect): subject MUST use ergative "ने" — मैंने, उसने, हमने, तुमने, उन्होंने, आपने. Verb agrees with object's gender/number.
-  Example: "I've played cricket" = "मैंने क्रिकेट खेला है" (NOT "मैं क्रिकेट खेला है")
-- For INTRANSITIVE verbs: Do NOT use "ने". Subject stays as-is: मैं, वह, हम.
+- Also provide a "spokenNote" explaining 2-3 key differences between the textbook version and the spoken version, in ${noteLanguage}. Keep it short (2-3 bullet points).
+${hindiPerfectRule}
+TRANSLATION: The "hindiTranslation" field MUST contain a ${translationLang} translation. Do NOT put English in this field.
 
 Respond with ONLY a valid JSON object:
 {
   "sentence": [ { "word": "...", "pos": "..." }, ... ],
-  "hindiTranslation": "Hindi translation of the spoken sentence",
+  "hindiTranslation": "${translationHint}",
   "spokenNote": "• Textbook vs Spoken difference 1\\n• Difference 2\\n• Difference 3"
 }`;
-  }, [getGrammarSentenceText]);
+  }, [getGrammarSentenceText, nativeLanguage]);
 
   // Handle grammar type button click
   const handleGrammarTypeChange = useCallback(async (type: GrammarType) => {
